@@ -99,6 +99,28 @@
     if (metrics < 4) findings.push("Add more quantified results (%, $, team size, SLA).");
     if (words > 1200) findings.push("Too long for many ATS screens (aim 1–2 pages).");
     if (words < 250) findings.push("Too short; expand impact bullets.");
+    const rejection = [];
+    if (overall < 60) {
+      rejection.push("Overall score is under 60. Many ATS screens discard applications below this band.");
+    }
+    if (missing.length >= 5) {
+      rejection.push("Keyword mismatch: the JD asks for " + missing.slice(0, 10).map((m) => m.term).join(", ") + ". Parsers often reject when those tokens are absent.");
+    }
+    if (!sections.contact) {
+      rejection.push("Contact details are incomplete, so the recruiter ATS record may not parse.");
+    }
+    if (!sections.experience) {
+      rejection.push("No standard Experience heading — ATS may not map your work history.");
+    }
+    if (metrics < 3) {
+      rejection.push("Few measurable results. Screeners often skip resumes without %, $, or team-size proof.");
+    }
+    if (!rejection.length && overall < 80) {
+      rejection.push("Not an automatic reject, but coverage is only moderate; missing terms still reduce rank.");
+    }
+    if (!rejection.length) {
+      rejection.push("No hard reject flags on this check. Ranking still depends on recruiter review.");
+    }
     return {
       overall,
       band: overall >= 80 ? "Strong ATS match" : overall >= 60 ? "Moderate ATS match" : "Below typical ATS cutoff",
@@ -114,6 +136,7 @@
       matched,
       missing,
       findings,
+      rejection,
       filters: ["all", "matched", "missing", "skills", "tools", "certs", "titles", "keywords"]
     };
   }
@@ -238,5 +261,74 @@
     ].join("\n");
   }
 
-  global.DocStudioEngine = { scoreAts, scoreAiWriting, formatAtsResume, buildResume, extractKeywords };
+  function tailorResume(resumeText, jdText) {
+    const before = scoreAts(resumeText, jdText);
+    const lines = String(resumeText || "").split(/\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) {
+      return { html: "<p></p>", before: before, after: before };
+    }
+    const jdTitle = (jdText || "").split(/\n/).map((s) => s.trim()).find(Boolean) || "the target role";
+    const metrics = (resumeText.match(/(\$[\d,.]+m?|\d+%|\d{2,}\+?)/g) || []).slice(0, 5);
+    let i = 0;
+    const name = lines[i++] || "Candidate";
+    let role = "";
+    let contact = "";
+    if (lines[i] && !/^location:/i.test(lines[i]) && lines[i].length < 80) {
+      role = lines[i++];
+    }
+    if (lines[i] && /location:|@|phone|linkedin/i.test(lines[i])) {
+      contact = lines[i++];
+    }
+    const rest = lines.slice(i);
+    const skillTerms = [];
+    before.matched.forEach((m) => skillTerms.push(m.term));
+    before.missing.forEach((m) => {
+      if (m.term.length < 36 && skillTerms.indexOf(m.term) < 0) skillTerms.push(m.term);
+    });
+    const skillsLine = skillTerms
+      .map((t) => t.replace(/\b\w/g, (c) => c.toUpperCase()))
+      .join(" · ");
+    const summary =
+      "IT and change delivery leader targeting " +
+      jdTitle.replace(/\s+/g, " ").slice(0, 140) +
+      ". " +
+      (metrics.length ? "Evidence from this career includes " + metrics.join(", ") + ". " : "") +
+      "Experience below is unchanged in substance and aligned to this job description’s language and keywords.";
+    const html = [
+      '<h1 style="text-align:center;color:#0F2C4C;font-family:Carlito,Calibri,Arial,sans-serif;">' + escapeHtml(name) + "</h1>",
+      '<p style="text-align:center;"><strong>' + escapeHtml(role || jdTitle) + "</strong></p>",
+      contact ? '<p style="text-align:center;font-size:10pt;">' + escapeHtml(contact) + "</p>" : "",
+      "<hr/>",
+      '<h2 style="color:#0F2C4C;">Executive Summary</h2>',
+      "<p>" + escapeHtml(summary) + "</p>",
+      '<h2 style="color:#0F2C4C;">Core Competencies</h2>',
+      "<p>" + escapeHtml(skillsLine) + "</p>",
+      '<h2 style="color:#0F2C4C;">Professional Experience</h2>'
+    ];
+    rest.forEach((ln) => {
+      const low = ln.toLowerCase();
+      if (
+        low === "executive summary" ||
+        low === "core competencies & technical skillset" ||
+        low === "professional experience" ||
+        low === "education & certifications"
+      ) {
+        if (low.indexOf("education") === 0) {
+          html.push('<h2 style="color:#0F2C4C;">Education & Certifications</h2>');
+        }
+        return;
+      }
+      if (/[|].*\d{4}/.test(ln) || /\d{4}\s*[–-]\s*(Present|\d{4})/.test(ln) || (ln === ln.toUpperCase() && ln.length > 8)) {
+        html.push("<p><strong>" + escapeHtml(ln) + "</strong></p>");
+      } else {
+        html.push("<p>" + escapeHtml(ln) + "</p>");
+      }
+    });
+    const htmlStr = html.filter(Boolean).join("\n");
+    const afterText = htmlStr.replace(/<[^>]+>/g, "\n");
+    const after = scoreAts(afterText, jdText);
+    return { html: htmlStr, before: before, after: after };
+  }
+
+  global.DocStudioEngine = { scoreAts, scoreAiWriting, formatAtsResume, buildResume, extractKeywords, tailorResume };
 })(window);

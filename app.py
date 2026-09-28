@@ -1,20 +1,13 @@
-"""Document studio: rich editor, web import, PDF / Word export."""
+"""Resume Studio: JD match, tailor, PDF / Word export."""
 from __future__ import annotations
 
 import io
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from exporter import text_to_docx_bytes, text_to_pdf_bytes
-from rich_export import (
-    fetch_web_html,
-    html_to_docx_bytes,
-    html_to_pdf_bytes,
-    plain_text_to_html,
-    sanitize_html,
-)
-from ats import format_ats_resume_html, html_to_text, score_ai_writing, score_ats
+from rich_export import html_to_docx_bytes, html_to_pdf_bytes, sanitize_html
 
 ROOT = Path(__file__).resolve().parent
 app = Flask(__name__)
@@ -29,51 +22,17 @@ def _filename(raw: str) -> str:
 
 @app.get("/")
 def home():
-    sample = (ROOT / "samples" / "venkat_application.txt").read_text(encoding="utf-8")
-    return render_template("index.html", sample_html=plain_text_to_html(sample))
+    return send_from_directory(ROOT / "docs", "index.html")
 
 
-@app.post("/fetch-url")
-def fetch_url():
-    url = (request.json or {}).get("url") or ""
-    try:
-        html = fetch_web_html(url)
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 400
-    return jsonify({"ok": True, "html": html})
+@app.get("/engine.js")
+def engine_js():
+    return send_from_directory(ROOT / "docs", "engine.js")
 
 
-@app.post("/ats-score")
-def ats_score():
-    data = request.get_json(force=True, silent=True) or {}
-    html = data.get("html") or ""
-    text = data.get("text") or html_to_text(html)
-    jd = data.get("jd") or ""
-    if not text.strip():
-        return jsonify({"ok": False, "error": "Resume/application is empty."}), 400
-    if not jd.strip():
-        return jsonify({"ok": False, "error": "Paste a job description first."}), 400
-    result = score_ats(text, jd)
-    result["has_tables"] = "<table" in (html or "").lower()
-    if result["has_tables"]:
-        result["findings"].insert(0, "Tables can break some ATS parsers. Use the Format ATS resume button.")
-    return jsonify({"ok": True, **result})
-
-
-@app.post("/ai-score")
-def ai_score():
-    data = request.get_json(force=True, silent=True) or {}
-    text = data.get("text") or html_to_text(data.get("html") or "")
-    return jsonify({"ok": True, **score_ai_writing(text)})
-
-
-@app.post("/format-resume")
-def format_resume():
-    data = request.get_json(force=True, silent=True) or {}
-    text = data.get("text") or html_to_text(data.get("html") or "")
-    if not text.strip():
-        return jsonify({"ok": False, "error": "Nothing to format."}), 400
-    return jsonify({"ok": True, "html": format_ats_resume_html(text)})
+@app.get("/sample.txt")
+def sample_txt():
+    return send_from_directory(ROOT / "docs", "sample.txt")
 
 
 @app.post("/export")
@@ -103,4 +62,4 @@ def export():
 
 if __name__ == "__main__":
     print("Open http://127.0.0.1:5055")
-    app.run(host="127.0.0.1", port=5055, debug=False)
+    app.run(host="0.0.0.0", port=5055, debug=False)

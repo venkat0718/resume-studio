@@ -3,246 +3,227 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Resume Studio — ATS · AI check · Builder</title>
+  <title>Resume Studio — JD match &amp; tailor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,400&family=Caladea:ital,wght@0,400;0,700;1,400&family=Carlito:ital,wght@0,400;0,700;1,400&family=Cousine:ital,wght@0,400;0,700&family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=Lato:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,400;0,700;1,400&family=Open+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Roboto:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,700;1,400&family=Tinos:ital,wght@0,400;0,700;1,400&family=Work+Sans:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/tinymce@7.6.1/tinymce.min.js" referrerpolicy="origin"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="engine.js"></script>
+  <script src="engine.js?v=20260928"></script>
   <style>
-    :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; }
+    :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body { font-family: "Segoe UI", Calibri, Arial, sans-serif; background: var(--paper); color: var(--ink); display: flex; flex-direction: column; }
-    header { background: var(--navy); color: #fff; padding: 0.7rem 1rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
-    header h1 { margin: 0; font-size: 1.15rem; }
-    header p { margin: 0.2rem 0 0; font-size: 0.78rem; opacity: 0.85; }
-    .chrome { background: #f7f4ee; border-bottom: 1px solid #d5cdc0; padding: 0.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem 0.65rem; align-items: end; }
-    .chrome label { display: block; font-size: 0.7rem; font-weight: 700; color: #5c6b7a; }
-    .chrome input, .chrome select, aside textarea, aside input, aside select { border: 1px solid #cfc4b2; padding: 0.38rem 0.5rem; font: inherit; width: 100%; }
-    #url { min-width: 220px; width: 22vw; }
-    button { background: var(--teal); color: #fff; border: 0; padding: 0.4rem 0.75rem; font: inherit; font-size: 0.82rem; font-weight: 650; cursor: pointer; height: 34px; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { font-family: Arimo, "Segoe UI", Arial, sans-serif; background: var(--paper); color: var(--ink); display: flex; flex-direction: column; min-width: 0; }
+    header { flex: 0 0 auto; background: var(--navy); color: #fff; padding: 0.65rem 1rem; display: flex; justify-content: space-between; gap: 0.75rem 1rem; flex-wrap: wrap; align-items: center; }
+    header h1 { margin: 0; font-size: 1.12rem; line-height: 1.3; }
+    header p { margin: 0.25rem 0 0; font-size: 0.8rem; line-height: 1.4; opacity: 0.9; max-width: 52rem; }
+    header > div:last-child { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chrome { flex: 0 0 auto; background: #f7f4ee; border-bottom: 1px solid var(--line); padding: 0.55rem 1rem; display: flex; flex-direction: column; gap: 0.45rem; align-items: stretch; }
+    .chrome-row { display: flex; flex-wrap: wrap; gap: 0.5rem 0.7rem; align-items: flex-end; }
+    .chrome label { display: block; font-size: 0.72rem; font-weight: 700; color: #5c6b7a; margin-bottom: 0.2rem; line-height: 1.3; }
+    .chrome input[type="text"], .chrome input:not([type="file"]) { border: 1px solid #cfc4b2; padding: 0.38rem 0.5rem; font: inherit; width: 10.5rem; max-width: 100%; }
+    .chrome input[type="file"] { max-width: 16rem; font-size: 0.75rem; }
+    button { background: var(--teal); color: #fff; border: 0; padding: 0.45rem 0.8rem; font: inherit; font-size: 0.82rem; font-weight: 650; cursor: pointer; min-height: 36px; height: auto; white-space: nowrap; line-height: 1.2; }
     button.navy { background: var(--navy); }
     button.ghost { background: #fff; color: var(--navy); border: 1px solid #cfc4b2; }
     button.gold { background: var(--gold); color: #1c2433; }
-    .workspace { flex: 1; display: grid; grid-template-columns: 360px 1fr; min-height: 0; }
-    aside { background: #fff; border-right: 1px solid #d5cdc0; display: flex; flex-direction: column; min-height: 0; }
-    .tabs { display: flex; }
-    .tabs button { flex: 1; height: 36px; border-radius: 0; }
-    .tab { display: none; padding: 0.6rem 0.75rem; overflow: auto; flex: 1; }
-    .tab.on { display: block; }
-    .score-num { font-size: 1.8rem; font-weight: 700; color: var(--navy); }
-    .bar { height: 6px; background: #eee; margin: 0.15rem 0 0.45rem; }
-    .bar > span { display: block; height: 100%; background: var(--teal); }
-    .chip { display: inline-block; margin: 0 0.2rem 0.2rem 0; padding: 0.12rem 0.35rem; font-size: 0.7rem; }
-    .chip.ok { background: #d8efe4; } .chip.miss { background: #f8d7d7; }
-    .stage { padding: 0.5rem; min-height: 0; overflow: auto; }
-    #status { font-size: 0.78rem; padding: 0.25rem 1rem; color: #5c6b7a; }
+    #status { flex: 0 0 auto; font-size: 0.8rem; line-height: 1.4; padding: 0.4rem 1rem; color: #5c6b7a; border-bottom: 1px solid var(--line); background: #faf8f4; overflow-wrap: anywhere; }
     #status.err { color: #9b2c2c; } #status.ok { color: #2f6b4f; }
-    .tox-tinymce { border: 0 !important; }
-    @media (max-width: 960px) { .workspace { grid-template-columns: 1fr; } }
+    .workspace { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 26%) minmax(0, 44%) minmax(0, 30%); min-height: 0; min-width: 0; overflow: hidden; }
+    .workspace > * { min-width: 0; min-height: 0; }
+    aside, .results { background: #fff; display: flex; flex-direction: column; overflow: hidden; }
+    aside { border-right: 1px solid var(--line); }
+    .editor-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: #fff; }
+    .results { border-left: 1px solid var(--line); overflow: auto; padding: 0 0.85rem 1rem; }
+    .pane-head { flex: 0 0 auto; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #5c6b7a; padding: 0.55rem 0.75rem; border-bottom: 1px solid #eee; line-height: 1.3; }
+    #jd { flex: 1 1 auto; width: 100%; border: 0; resize: none; padding: 0.7rem 0.75rem; font: inherit; font-size: 0.9rem; line-height: 1.45; overflow: auto; min-height: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+    .score-num { font-size: 1.85rem; font-weight: 700; color: var(--navy); line-height: 1.2; padding-top: 0.55rem; }
+    #band { font-size: 0.82rem; line-height: 1.4; margin: 0.25rem 0 0.6rem; overflow-wrap: anywhere; }
+    .bar { height: 6px; background: #eee; margin: 0.15rem 0 0.5rem; }
+    .bar > span { display: block; height: 100%; background: var(--teal); }
+    .chip { display: inline-block; max-width: 100%; margin: 0 0.25rem 0.3rem 0; padding: 0.18rem 0.4rem; font-size: 0.74rem; line-height: 1.3; overflow-wrap: anywhere; vertical-align: top; }
+    .chip.ok { background: #d8efe4; } .chip.miss { background: #f8d7d7; }
+    .stage { position: relative; flex: 1 1 auto; overflow: hidden; background: #fff; min-height: 0; }
+    .tox-tinymce { border: 0 !important; position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; }
+    .tox .tox-editor-header { background: #f7f4ee !important; border-bottom: 1px solid var(--line) !important; }
+    .tox .tox-toolbar, .tox .tox-menubar { flex-wrap: wrap; }
+    .results h3 { margin: 0.75rem 0 0.35rem; font-size: 0.82rem; line-height: 1.3; color: var(--navy); }
+    .results ul { margin: 0; padding-left: 1.15rem; font-size: 0.8rem; line-height: 1.45; }
+    .results li { margin: 0 0 0.35rem; overflow-wrap: anywhere; }
+    @media (max-width: 1200px) {
+      html, body { height: auto; min-height: 100%; overflow: auto; }
+      .workspace { grid-template-columns: 1fr; overflow: visible; }
+      aside { min-height: 14rem; border-right: 0; border-bottom: 1px solid var(--line); }
+      .editor-col { min-height: 28rem; }
+      .stage { min-height: 24rem; }
+      .results { min-height: 18rem; border-left: 0; border-top: 1px solid var(--line); }
+    }
   </style>
 </head>
 <body>
   <header>
     <div>
       <h1>Resume Studio</h1>
-      <p>ATS analyser · AI-writing check · resume builder · PDF/Word — works in the browser.</p>
+      <p>Paste the job description and your resume. Match, missing terms, reject reasons, then one-click tailor. Save PDF or Word.</p>
     </div>
     <div>
-      <button class="ghost" id="btnNew" type="button">New</button>
-      <button class="ghost" id="btnSample" type="button">Load application</button>
-      <button class="gold" id="btnFormat" type="button">Format ATS resume</button>
+      <button class="ghost" id="btnNew" type="button">Clear resume</button>
+      <button class="ghost" id="btnSample" type="button">Load sample</button>
     </div>
   </header>
   <div class="chrome">
-    <div><label>Import URL</label><input id="url" type="url" placeholder="https://job-ad.example/..." /></div>
-    <button class="navy" id="btnFetch" type="button">URL → editor</button>
-    <button class="ghost" id="btnFetchJd" type="button">URL → JD</button>
-    <div><label>File name</label><input id="filename" value="ATS_Resume" /></div>
-    <button id="btnPdf" type="button">PDF</button>
-    <button class="navy" id="btnDocx" type="button">Word</button>
-    <button class="gold" id="btnScore" type="button">ATS score</button>
-    <button class="ghost" id="btnAi" type="button">AI detector</button>
+    <div class="chrome-row">
+      <button class="navy" id="btnScore" type="button">Analyse match</button>
+      <button class="gold" id="btnTailor" type="button">Write tailored resume</button>
+      <button id="btnPdf" type="button">Save PDF</button>
+      <button class="navy" id="btnDocx" type="button">Save Word</button>
+    </div>
+    <div class="chrome-row">
+      <div>
+        <label>Attach resume (txt / html)</label>
+        <input id="resumeFile" type="file" accept=".txt,.html,.htm,.md" />
+      </div>
+      <div>
+        <label>File name</label>
+        <input id="filename" type="text" value="ATS_Resume" />
+      </div>
+    </div>
   </div>
-  <div id="status">Paste a JD, run ATS score, check AI-likeness, or build a resume in the left tabs.</div>
+  <div id="status">Paste the JD on the left and your resume in the editor. Analyse, then tailor in one click. Export when you like the score.</div>
   <div class="workspace">
     <aside>
-      <div class="tabs">
-        <button class="navy" data-tab="jd" type="button">Job description</button>
-        <button class="ghost" data-tab="build" type="button">Builder</button>
-        <button class="ghost" data-tab="score" type="button">Scores</button>
-      </div>
-      <div class="tab on" id="tab-jd">
-        <textarea id="jd" style="min-height:220px;"></textarea>
-      </div>
-      <div class="tab" id="tab-build">
-        <label>Name</label><input id="bName" value="" placeholder="Full name" />
-        <label>Title</label><input id="bTitle" value="" placeholder="Target job title" />
-        <label>Location</label><input id="bLoc" value="" placeholder="City, country" />
-        <label>Phone</label><input id="bPhone" value="" placeholder="Phone" />
-        <label>Email</label><input id="bEmail" value="" placeholder="email@example.com" />
-        <label>LinkedIn</label><input id="bLi" value="" placeholder="linkedin.com/in/…" />
-        <label>Executive summary</label><textarea id="bSum" rows="4" placeholder="3–4 lines on impact, scope, and strengths."></textarea>
-        <label>Skills (comma-separated for ATS)</label><textarea id="bSkills" rows="3" placeholder="Agile, Jira, ITIL, …"></textarea>
-        <label>Experience (one bullet per line)</label><textarea id="bExp" rows="6" placeholder="Company | Role (dates) — result"></textarea>
-        <label>Education & certs (one per line)</label><textarea id="bEdu" rows="4" placeholder="Degree — school"></textarea>
-        <button class="gold" id="btnBuild" type="button" style="margin-top:0.5rem;width:100%;">Build into editor</button>
-      </div>
-      <div class="tab" id="tab-score">
-        <div class="score-num" id="overall">—</div>
-        <div id="band" style="font-size:0.8rem;margin-bottom:0.5rem;">Run ATS score or AI detector</div>
-        <div id="bars"></div>
-        <input id="kwFind" type="search" placeholder="Keyword finder…" />
-        <div id="filterBtns" style="display:flex;flex-wrap:wrap;gap:0.25rem;margin:0.4rem 0;"></div>
-        <div id="chips"></div>
-        <ul id="findings" style="padding-left:1.1rem;font-size:0.8rem;"></ul>
-      </div>
+      <div class="pane-head">Job description — paste here</div>
+      <textarea id="jd" placeholder="Paste the full job description. Do not use a URL."></textarea>
     </aside>
-    <div class="stage"><textarea id="editor"></textarea></div>
+    <div class="editor-col">
+      <div class="pane-head">Resume — paste or attach</div>
+      <div class="stage"><textarea id="editor"></textarea></div>
+    </div>
+    <div class="results">
+      <div class="pane-head">Score &amp; keywords</div>
+      <div class="score-num" id="overall">—</div>
+      <div id="band" style="font-size:0.8rem;">Paste JD + resume, then Analyse match</div>
+      <div id="bars"></div>
+      <h3>Matching keywords</h3>
+      <div id="matchedKw"></div>
+      <h3>Missing keywords</h3>
+      <div id="missingKw"></div>
+      <h3>Why this resume may not be selected</h3>
+      <ul id="reject"></ul>
+      <h3>Notes</h3>
+      <ul id="findings"></ul>
+    </div>
   </div>
   <script>
-    const DEFAULT_JD = `Head of IT & Change Leader — IFS Australia & New Zealand IT
-Securities Services – CIB (IFS Australia & New Zealand)
-
-IT & Change Leader for regional IT delivery and change.
-- End-to-end program and change management in a global matrix
-- APAC/global sponsors, steering committees, KPI and SLA governance
-- Legacy modernisation, cloud-native ops, DevOps and CI/CD
-- Large engineering teams, vendor management, budget ownership
-- Agile/Scrum, Jira, Power BI, ITIL, risk management
-- Liaison between Global IT, regional units, and partners`;
-
     const statusEl = document.getElementById("status");
-    let lastAts = null, activeFilter = "all";
     const $ = (id) => document.getElementById(id);
-
     function setStatus(m, k) { statusEl.textContent = m; statusEl.className = k || ""; }
 
-    document.getElementById("jd").value = DEFAULT_JD;
-    document.querySelectorAll(".tabs button").forEach((b) => {
-      b.onclick = () => {
-        document.querySelectorAll(".tabs button").forEach((x) => { x.className = "ghost"; });
-        b.className = "navy";
-        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("on"));
-        document.getElementById("tab-" + b.dataset.tab).classList.add("on");
-      };
-    });
+    const FONT_FORMATS = [
+      "Carlito=Carlito,Calibri,sans-serif",
+      "Arimo=Arimo,Arial,sans-serif",
+      "Tinos=Tinos,'Times New Roman',serif",
+      "Caladea=Caladea,Cambria,serif",
+      "Cousine=Cousine,'Courier New',monospace",
+      "EB Garamond='EB Garamond',Garamond,serif",
+      "Libre Baskerville='Libre Baskerville',Georgia,serif",
+      "Merriweather=Merriweather,Georgia,serif",
+      "PT Serif='PT Serif',Georgia,serif",
+      "Noto Serif='Noto Serif',serif",
+      "Open Sans='Open Sans',sans-serif",
+      "Source Sans 3='Source Sans 3',sans-serif",
+      "Roboto=Roboto,sans-serif",
+      "Lato=Lato,sans-serif",
+      "Nunito=Nunito,sans-serif",
+      "Work Sans='Work Sans',sans-serif",
+      "IBM Plex Sans='IBM Plex Sans',sans-serif",
+      "Noto Sans='Noto Sans',sans-serif",
+      "Arial=Arial,Helvetica,sans-serif",
+      "Georgia=Georgia,serif",
+      "Times New Roman='Times New Roman',Times,serif"
+    ].join(";");
 
     tinymce.init({
       selector: "#editor",
       license_key: "gpl",
       base_url: "https://cdn.jsdelivr.net/npm/tinymce@7.6.1",
       suffix: ".min",
-      height: "calc(100vh - 200px)",
-      menubar: "file edit view insert format tools table help",
-      plugins: "preview searchreplace autolink lists link image table wordcount fullscreen code charmap insertdatetime advlist",
-      toolbar: "undo redo | blocks fontfamily fontsize | bold italic underline | forecolor | alignleft aligncenter alignright | bullist numlist | link table | searchreplace | removeformat",
+      height: 400,
+      resize: false,
+      toolbar_mode: "wrap",
+      menubar: false,
+      plugins: "lists link table wordcount searchreplace",
+      toolbar: "undo redo | fontfamily fontsize | bold italic underline | bullist numlist | removeformat",
+      font_family_formats: FONT_FORMATS,
       browser_spellcheck: true,
       promotion: false,
       branding: false,
-      content_style: "body{font-family:Calibri,Arial,sans-serif;font-size:11pt;max-width:760px;margin:18px auto;}"
+      placeholder: "Paste your full resume here, or use Attach resume / Load sample.",
+      content_css: "https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400;0,700;1,400&family=Caladea:ital,wght@0,400;0,700;1,400&family=Carlito:ital,wght@0,400;0,700;1,400&family=Cousine:ital,wght@0,400;0,700&family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=Lato:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Nunito:ital,wght@0,400;0,700;1,400&family=Open+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=Roboto:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,700;1,400&family=Tinos:ital,wght@0,400;0,700;1,400&family=Work+Sans:ital,wght@0,400;0,700;1,400&display=swap",
+      content_style: "body{font-family:Carlito,Calibri,Arial,sans-serif;font-size:11pt;line-height:1.4;max-width:720px;margin:16px auto;padding:0 12px;overflow-wrap:anywhere;}"
     });
 
-    async function loadSample() {
+    function renderMatch(data) {
+      $("overall").textContent = data.overall + " / 100";
+      $("band").textContent = data.band + (data.word_count ? " · " + data.word_count + " words" : "");
+      $("bars").innerHTML = Object.entries(data.parts || {}).map(([k, v]) =>
+        "<div style='font-size:0.72rem'>" + k.replaceAll("_", " ") + " " + v + "</div><div class='bar'><span style='width:" + v + "%'></span></div>"
+      ).join("");
+      $("matchedKw").innerHTML = (data.matched || []).map((r) => "<span class='chip ok'>" + r.term + "</span>").join("") || "<span class='chip'>None</span>";
+      $("missingKw").innerHTML = (data.missing || []).map((r) => "<span class='chip miss'>" + r.term + "</span>").join("") || "<span class='chip ok'>None</span>";
+      $("reject").innerHTML = (data.rejection || []).map((x) => "<li>" + x + "</li>").join("");
+      $("findings").innerHTML = (data.findings || []).map((x) => "<li>" + x + "</li>").join("");
+    }
+
+    function analyse() {
+      const text = tinymce.get("editor").getContent({ format: "text" });
+      const jd = $("jd").value;
+      if (!jd.trim()) { setStatus("Paste the job description on the left.", "err"); return null; }
+      if (!text.trim()) { setStatus("Paste or attach your resume in the editor.", "err"); return null; }
+      const data = DocStudioEngine.scoreAts(text, jd);
+      renderMatch(data);
+      setStatus("Current score " + data.overall + " / 100. Green = matching, red = missing.", "ok");
+      return data;
+    }
+
+    $("btnScore").onclick = analyse;
+    $("btnTailor").onclick = () => {
+      const text = tinymce.get("editor").getContent({ format: "text" });
+      const jd = $("jd").value;
+      if (!jd.trim()) { setStatus("Paste the job description first.", "err"); return; }
+      if (!text.trim()) { setStatus("Add your resume first.", "err"); return; }
+      const out = DocStudioEngine.tailorResume(text, jd);
+      tinymce.get("editor").setContent(out.html);
+      renderMatch(out.after);
+      $("filename").value = "ATS_Resume";
+      setStatus("Tailored resume written from your experience. Score now " + out.after.overall + " / 100. Save PDF or Word when ready.", "ok");
+    };
+
+    $("btnNew").onclick = () => tinymce.get("editor").setContent("<p></p>");
+    $("btnSample").onclick = async () => {
       try {
         const t = await (await fetch("sample.txt")).text();
         const html = t.split(/\n\n/).map((p) => "<p>" + p.replace(/\n/g, "<br/>") + "</p>").join("");
         tinymce.get("editor").setContent(html);
-        setStatus("Application loaded.", "ok");
+        setStatus("Sample resume loaded. Paste a JD and analyse.", "ok");
       } catch (e) {
         setStatus("Could not load sample.txt", "err");
       }
-    }
-    window.addEventListener("load", () => setTimeout(loadSample, 600));
-
-    $("btnNew").onclick = () => tinymce.get("editor").setContent("<p></p>");
-    $("btnSample").onclick = loadSample;
-    $("btnBuild").onclick = () => {
-      const html = DocStudioEngine.buildResume({
-        name: $("bName").value, title: $("bTitle").value, location: $("bLoc").value,
-        phone: $("bPhone").value, email: $("bEmail").value, linkedin: $("bLi").value,
-        summary: $("bSum").value, skills: $("bSkills").value, experience: $("bExp").value, education: $("bEdu").value
-      });
-      tinymce.get("editor").setContent(html);
-      $("filename").value = "ATS_Resume";
-      setStatus("Resume built into the editor. Export PDF or Word.", "ok");
-    };
-    $("btnFormat").onclick = () => {
-      const text = tinymce.get("editor").getContent({ format: "text" });
-      tinymce.get("editor").setContent(DocStudioEngine.formatAtsResume(text));
-      $("filename").value = "ATS_Resume";
-      setStatus("ATS-formatted (linear, no tables).", "ok");
     };
 
-    async function fetchUrl(intoJd) {
-      const url = $("url").value.trim();
-      if (!url) { setStatus("Enter a URL.", "err"); return; }
-      setStatus("Fetching…");
-      let html = "";
-      try {
-        const r = await fetch("/fetch-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
-        if (r.ok) html = (await r.json()).html || "";
-      } catch (e) {}
-      if (!html) {
-        try {
-          const r = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
-          const t = await r.text();
-          html = "<p>" + t.replace(/<[^>]+>/g, " ").slice(0, 20000) + "</p>";
-        } catch (e) {
-          setStatus("Could not fetch (CORS). Paste the JD instead.", "err");
-          return;
-        }
-      }
-      if (intoJd) { $("jd").value = html.replace(/<[^>]+>/g, " "); setStatus("JD filled from URL.", "ok"); }
-      else { tinymce.get("editor").setContent(html); setStatus("Imported to editor.", "ok"); }
-    }
-    $("btnFetch").onclick = () => fetchUrl(false);
-    $("btnFetchJd").onclick = () => fetchUrl(true);
-
-    function renderAts(data) {
-      lastAts = data;
-      $("overall").textContent = data.overall + " / 100";
-      $("band").textContent = data.band + (data.word_count ? " · " + data.word_count + " words" : "");
-      $("bars").innerHTML = Object.entries(data.parts || {}).map(([k, v]) =>
-        `<div style="font-size:0.72rem">${k.replaceAll("_"," ")} ${v}</div><div class="bar"><span style="width:${v}%"></span></div>`
-      ).join("");
-      $("filterBtns").innerHTML = "";
-      (data.filters || ["all","matched","missing"]).forEach((f) => {
-        const b = document.createElement("button");
-        b.className = f === activeFilter ? "navy" : "ghost";
-        b.style.height = "26px"; b.style.fontSize = "0.7rem";
-        b.textContent = f;
-        b.onclick = () => { activeFilter = f; renderChips(); };
-        $("filterBtns").appendChild(b);
-      });
-      $("findings").innerHTML = (data.findings || []).map((x) => "<li>" + x + "</li>").join("");
-      if (data.disclaimer) $("findings").innerHTML += "<li>" + data.disclaimer + "</li>";
-      renderChips();
-      document.querySelector('[data-tab="score"]').click();
-    }
-    function renderChips() {
-      if (!lastAts || !lastAts.matched) return;
-      const q = $("kwFind").value.toLowerCase();
-      let rows = [...(lastAts.matched||[]), ...(lastAts.missing||[])];
-      if (activeFilter === "matched") rows = lastAts.matched;
-      if (activeFilter === "missing") rows = lastAts.missing;
-      if (["skills","tools","certs","titles","keywords"].includes(activeFilter)) rows = rows.filter((r) => r.category === activeFilter);
-      if (q) rows = rows.filter((r) => r.term.includes(q));
-      $("chips").innerHTML = rows.map((r) => `<span class="chip ${r.matched?"ok":"miss"}">${r.term}</span>`).join("");
-    }
-    $("kwFind").addEventListener("input", renderChips);
-
-    $("btnScore").onclick = () => {
-      const text = tinymce.get("editor").getContent({ format: "text" });
-      const jd = $("jd").value;
-      if (!jd.trim()) { setStatus("Paste a job description first.", "err"); return; }
-      renderAts(DocStudioEngine.scoreAts(text, jd));
-      setStatus("ATS score (local parser). Green = found, red = missing.", "ok");
-    };
-    $("btnAi").onclick = () => {
-      const text = tinymce.get("editor").getContent({ format: "text" });
-      renderAts(DocStudioEngine.scoreAiWriting(text));
-      setStatus("AI-writing check is heuristic only, not a vendor detector.", "ok");
-    };
+    $("resumeFile").addEventListener("change", (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const raw = String(reader.result || "");
+        if (/\.html?$/i.test(file.name)) tinymce.get("editor").setContent(raw);
+        else tinymce.get("editor").setContent("<p>" + raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br/>") + "</p>");
+        setStatus("Resume loaded from file. Paste the JD and analyse.", "ok");
+      };
+      reader.readAsText(file);
+    });
 
     async function exportDoc(fmt) {
       const editor = tinymce.get("editor");
@@ -260,7 +241,7 @@ IT & Change Leader for regional IT delivery and change.
           a.href = URL.createObjectURL(blob);
           a.download = name + (fmt === "docx" ? ".docx" : ".pdf");
           a.click();
-          setStatus("Downloaded " + a.download, "ok");
+          setStatus("Saved " + a.download, "ok");
           return;
         }
       } catch (e) {}
@@ -268,7 +249,7 @@ IT & Change Leader for regional IT delivery and change.
         const el = document.createElement("div");
         el.innerHTML = html;
         await html2pdf().set({ filename: name + ".pdf", margin: 12 }).from(el).save();
-        setStatus("PDF downloaded (browser engine).", "ok");
+        setStatus("PDF saved (browser engine).", "ok");
         return;
       }
       const blob = new Blob(["<html><body>" + html + "</body></html>"], { type: "application/msword" });
@@ -276,7 +257,7 @@ IT & Change Leader for regional IT delivery and change.
       a.href = URL.createObjectURL(blob);
       a.download = name + ".doc";
       a.click();
-      setStatus("Word-compatible .doc downloaded (open in Word and Save As .docx if needed).", "ok");
+      setStatus("Word-compatible .doc saved. Open in Word and Save As .docx if needed.", "ok");
     }
     $("btnPdf").onclick = () => exportDoc("pdf");
     $("btnDocx").onclick = () => exportDoc("docx");

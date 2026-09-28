@@ -1,14 +1,10 @@
 # Resume Studio
 
-All-in-one **ATS analyser**, **AI-writing check**, **resume builder**, and **PDF/Word** export.
-
-## Use from any computer (no install)
-
-Open the published site (after GitHub Pages is on):
+Paste a **job description** and a **resume**. The app shows **matching** keywords, **missing** keywords, and **why the resume may not be selected**. One click writes a **tailored resume** from your existing experience, then shows the **current score** and matching keywords. Save **PDF** or **Word**. No URL import.
 
 **https://venkat0718.github.io/resume-studio/**
 
-## Use on this PC
+## Local
 
 ```powershell
 cd "C:\Users\VENKAT\Documents\Application for DOCS"
@@ -16,18 +12,10 @@ python -m pip install -r requirements.txt
 python app.py
 ```
 
-Then http://127.0.0.1:5055
+http://127.0.0.1:5055
 
-## What it does
+## Docs
 
-| Tool | How |
-|---|---|
-| ATS score | Paste JD → **ATS score**. Green chips = in resume, red = missing. |
-| AI detector | **AI detector** — local heuristics (not Turnitin/GPTZero). |
-| Resume builder | **Builder** tab → fill fields → **Build into editor**. |
-| Format ATS resume | Linear headings, no tables. |
-| Export | **PDF** / **Word**. |
+See `Doc/` for overview, user guide, ATS method, Flask, and GitHub Pages.
 
-Keyword finder and filters: all / matched / missing / skills / tools / certs / titles.
-
-Demo text is fictional (Jordan Lee / example.com). Do not paste real personal data into the public site if you want it to stay private.
+Editor fonts are loaded from Google Fonts (Carlito, Arimo, Tinos, and other serif/sans families). Demo text is fictional (Jordan Lee / example.com).
