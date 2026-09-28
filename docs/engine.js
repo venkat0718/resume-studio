@@ -593,7 +593,7 @@
     const aiHits = AI_MARKERS.filter((m) => low.includes(m));
     const atsHits = ATS_MARKERS.filter((m) => low.includes(m));
     const hidden = /font-size:\s*0|color:\s*#(fff|ffffff|white)|display:\s*none/i.test(raw);
-    const stuffed = ((raw.match(/[·•|,]\s*[A-Za-z][^·•|,]{0,24}/g) || []).length > 35);
+    const stuffed = /keywords\s*:/i.test(raw) && ((raw.match(/[·•|,]\s*[A-Za-z][^·•|,]{0,24}/g) || []).length > 20);
     const keywordBlock = /keywords\s*:/i.test(raw);
     const ai = Math.min(100, aiHits.length * 12);
     const ats = Math.min(100, atsHits.length * 25 + (hidden ? 40 : 0) + (stuffed ? 20 : 0) + (keywordBlock ? 25 : 0));
@@ -607,20 +607,33 @@
     return { ai: ai, ats: ats, aiHits: aiHits, atsHits: atsHits, notes: notes };
   }
 
+  function replaceInText(html, phrase, to) {
+    const re = new RegExp(escapeRe(phrase), "gi");
+    return String(html || "").replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
+      if (tag) return tag;
+      return text.replace(re, to);
+    });
+  }
+
   function cleanWatermarks(html) {
     let h = stripHighlights(html);
+    h = h.replace(/<span[^>]*class="[^"]*wm-(?:ai|ats)[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, "$1");
     h = h.replace(/<[^>]*style="[^"]*(font-size:\s*0|color:\s*#(fff|ffffff)|color:\s*white|display:\s*none)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi, "");
-    h = h.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
-      if (tag) return tag;
-      let t = text;
-      PLAIN_SWAPS.forEach((pair) => {
-        t = t.replace(pair[0], pair[1]);
+    PLAIN_SWAPS.forEach((pair) => {
+      h = h.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
+        if (tag) return tag;
+        return text.replace(pair[0], pair[1]);
       });
-      t = t.replace(/\s{2,}/g, " ");
-      return t;
+    });
+    AI_MARKERS.forEach((m) => {
+      h = replaceInText(h, m, "");
+    });
+    ATS_MARKERS.forEach((m) => {
+      h = replaceInText(h, m, "");
     });
     h = h.replace(/<h[1-6][^>]*>\s*keywords\s*<\/h[1-6]>[\s\S]*?(?=<h[1-6]|$)/gi, "");
     h = stripHighlights(h);
+    h = h.replace(/[ \t]{2,}/g, " ").replace(/ +\./g, ".").replace(/ ,/g, ",");
     return { html: h, watermarks: scoreWatermarks(h) };
   }
 
