@@ -19,7 +19,7 @@
     "results-driven", "passionate about", "seasoned professional", "dynamic leader",
     "synergy", "synergies", "spearheaded", "orchestrated", "pioneered",
     "utilize", "utilized", "utilising", "utilizing", "aligned to this job",
-    "targeting the", "keyword", "ats optim", "watermark"
+    "targeting the", "ats optim"
   ];
 
   const PLAIN_SWAPS = [
@@ -539,6 +539,54 @@
     return tailorInPlace(sourceHtml, jdText);
   }
 
+  function escapeRe(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function stripHighlights(html) {
+    return String(html || "")
+      .replace(/<mark\b[^>]*>/gi, "")
+      .replace(/<\/mark>/gi, "");
+  }
+
+  function highlightWatermarks(html) {
+    let h = stripHighlights(html);
+    const wm = scoreWatermarks(h);
+    const phrases = [];
+    (wm.aiHits || []).forEach((p) => phrases.push({ p: p, cls: "wm-ai" }));
+    (wm.atsHits || []).forEach((p) => phrases.push({ p: p, cls: "wm-ats" }));
+    phrases.sort((a, b) => b.p.length - a.p.length);
+    if (phrases.length) {
+      h = h.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
+        if (tag) return tag;
+        let t = text;
+        phrases.forEach((row) => {
+          const re = new RegExp("(" + escapeRe(row.p) + ")", "gi");
+          t = t.replace(re, '<mark class="' + row.cls + '">$1</mark>');
+        });
+        return t;
+      });
+    }
+    return { html: h, watermarks: wm };
+  }
+
+  function unwrapStaleMarks(html) {
+    const parsed = new DOMParser().parseFromString("<div id='wm-root'>" + html + "</div>", "text/html");
+    const root = parsed.getElementById("wm-root") || parsed.body;
+    const wm = scoreWatermarks(root.textContent || "");
+    const hits = (wm.aiHits || []).concat(wm.atsHits || []).map((h) => h.toLowerCase());
+    root.querySelectorAll("mark").forEach((m) => {
+      const t = (m.textContent || "").toLowerCase().trim();
+      if (!t || !hits.some((h) => t.indexOf(h) >= 0 || h.indexOf(t) >= 0)) {
+        const p = m.parentNode;
+        if (!p) return;
+        while (m.firstChild) p.insertBefore(m.firstChild, m);
+        p.removeChild(m);
+      }
+    });
+    return root.innerHTML;
+  }
+
   function scoreWatermarks(htmlOrText) {
     const raw = String(htmlOrText || "");
     const low = raw.toLowerCase();
@@ -560,7 +608,7 @@
   }
 
   function cleanWatermarks(html) {
-    let h = String(html || "");
+    let h = stripHighlights(html);
     h = h.replace(/<[^>]*style="[^"]*(font-size:\s*0|color:\s*#(fff|ffffff)|color:\s*white|display:\s*none)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi, "");
     h = h.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
       if (tag) return tag;
@@ -572,6 +620,7 @@
       return t;
     });
     h = h.replace(/<h[1-6][^>]*>\s*keywords\s*<\/h[1-6]>[\s\S]*?(?=<h[1-6]|$)/gi, "");
+    h = stripHighlights(h);
     return { html: h, watermarks: scoreWatermarks(h) };
   }
 
@@ -612,6 +661,9 @@
     looksLikeBinary,
     scoreWatermarks,
     cleanWatermarks,
+    highlightWatermarks,
+    stripHighlights,
+    unwrapStaleMarks,
     plainToHtml
   };
 })(window);

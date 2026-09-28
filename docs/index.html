@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="engine.js?v=20260928g"></script>
+  <script src="engine.js?v=20260928h"></script>
   <style>
     :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
@@ -126,7 +126,8 @@
       <div style="font-size:0.82rem;line-height:1.4;">ATS watermark <strong id="wmAts">—</strong> / 100</div>
       <div class="bar"><span id="wmAtsBar" style="width:0;background:#c48b2a;"></span></div>
       <ul id="wmNotes"></ul>
-      <button class="ghost" id="btnCleanWm" type="button" style="margin-top:0.4rem;width:100%;">Clean watermarks</button>
+      <button class="ghost" id="btnCleanWm" type="button" style="margin-top:0.4rem;width:100%;">Clean watermarks only</button>
+      <p style="font-size:0.72rem;color:#5c6b7a;margin:0.35rem 0 0;line-height:1.35;">Yellow = AI wording. Pink = ATS wording. Edit in the resume to clear a mark, or use the button. Highlights are not saved in PDF/Word.</p>
     </div>
   </div>
   <script>
@@ -242,21 +243,25 @@
       branding: false,
       placeholder: "Paste your full resume here, or use Attach resume / Load sample.",
       content_css: false,
-      content_style: officeFontFaces() + "body{font-family:Calibri,Carlito,Arial,sans-serif;font-size:11pt;line-height:1.4;max-width:720px;margin:16px auto;padding:0 12px;overflow-wrap:anywhere;}",
+      content_style: officeFontFaces() + "body{font-family:Calibri,Carlito,Arial,sans-serif;font-size:11pt;line-height:1.4;max-width:720px;margin:16px auto;padding:0 12px;overflow-wrap:anywhere;} mark.wm-ai{background:#ffe08a;padding:0 1px;} mark.wm-ats{background:#ffc4c4;padding:0 1px;}",
       setup: (ed) => {
         ed.on("init", () => {
           const s = ed.getDoc().createElement("style");
-          s.textContent = officeFontFaces();
+          s.textContent = officeFontFaces() + " mark.wm-ai{background:#ffe08a;padding:0 1px;} mark.wm-ats{background:#ffc4c4;padding:0 1px;}";
           ed.getDoc().head.appendChild(s);
           ed.getBody().style.fontFamily = "Calibri, Carlito, sans-serif";
+        });
+        ed.on("PastePostProcess", () => setTimeout(() => reviewResume(true), 80));
+        ed.on("keyup", () => {
+          clearTimeout(ed._wmTimer);
+          ed._wmTimer = setTimeout(() => reviewResume(false), 700);
         });
       }
     });
 
-    function renderWatermarks() {
-      const ed = tinymce.get("editor");
-      if (!ed) return;
-      const wm = DocStudioEngine.scoreWatermarks(ed.getContent());
+    let skipReview = false;
+
+    function paintWatermarks(wm) {
       $("wmAi").textContent = wm.ai;
       $("wmAts").textContent = wm.ats;
       $("wmAiBar").style.width = wm.ai + "%";
@@ -264,7 +269,7 @@
       $("wmNotes").innerHTML = (wm.notes || []).map((x) => "<li>" + x + "</li>").join("");
     }
 
-    function renderMatch(data) {
+    function paintMatch(data) {
       $("overall").textContent = data.overall + " / 100";
       $("band").textContent = data.band + (data.word_count ? " · " + data.word_count + " words" : "");
       $("bars").innerHTML = Object.entries(data.parts || {}).map(([k, v]) =>
@@ -274,18 +279,62 @@
       $("missingKw").innerHTML = (data.missing || []).map((r) => "<span class='chip miss'>" + r.term + "</span>").join("") || "<span class='chip ok'>None</span>";
       $("reject").innerHTML = (data.rejection || []).map((x) => "<li>" + x + "</li>").join("");
       $("findings").innerHTML = (data.findings || []).map((x) => "<li>" + x + "</li>").join("");
+    }
+
+    function reviewResume(applyHighlights) {
+      const ed = tinymce.get("editor");
+      if (!ed || skipReview) return;
+      const text = ed.getContent({ format: "text" });
+      if (!text.trim()) {
+        paintWatermarks({ ai: 0, ats: 0, notes: ["Paste or attach a resume."] });
+        return;
+      }
+      let html = ed.getContent();
+      if (applyHighlights) {
+        const hi = DocStudioEngine.highlightWatermarks(html);
+        if (hi.html !== html) {
+          skipReview = true;
+          ed.setContent(hi.html);
+          skipReview = false;
+          html = hi.html;
+        }
+      } else if (/<mark\b/i.test(html)) {
+        const next = DocStudioEngine.unwrapStaleMarks(html);
+        if (next !== html) {
+          skipReview = true;
+          ed.setContent(next);
+          skipReview = false;
+          html = next;
+        }
+      }
+      const wm = DocStudioEngine.scoreWatermarks(html);
+      paintWatermarks(wm);
+      const jd = $("jd").value;
+      if (jd.trim()) paintMatch(DocStudioEngine.scoreAts(ed.getContent({ format: "text" }), jd));
+      else {
+        $("overall").textContent = Math.max(0, 100 - Math.round((wm.ai + wm.ats) / 2)) + " / 100";
+        $("band").textContent = text.split(/\s+/).filter(Boolean).length + " words · cleanliness (paste a JD for keyword match)";
+      }
+    }
+
+    function renderWatermarks() {
+      const ed = tinymce.get("editor");
+      if (!ed) return;
+      paintWatermarks(DocStudioEngine.scoreWatermarks(ed.getContent()));
+    }
+
+    function renderMatch(data) {
+      paintMatch(data);
       renderWatermarks();
     }
 
     function analyse() {
       const text = tinymce.get("editor").getContent({ format: "text" });
-      const jd = $("jd").value;
-      if (!jd.trim()) { setStatus("Paste the job description on the left.", "err"); return null; }
       if (!text.trim()) { setStatus("Paste or attach your resume in the editor.", "err"); return null; }
-      const data = DocStudioEngine.scoreAts(text, jd);
-      renderMatch(data);
-      setStatus("Current score " + data.overall + " / 100. Green = matching, red = missing.", "ok");
-      return data;
+      reviewResume(true);
+      const jd = $("jd").value;
+      if (jd.trim()) setStatus("Score and watermarks updated. Yellow = AI, pink = ATS.", "ok");
+      else setStatus("Watermarks scored. Paste a JD for keyword match.", "ok");
     }
 
     $("btnScore").onclick = analyse;
@@ -293,12 +342,11 @@
       const ed = tinymce.get("editor");
       if (!ed) return;
       const out = DocStudioEngine.cleanWatermarks(ed.getContent());
+      skipReview = true;
       ed.setContent(out.html);
-      applyResumeFont(resumeFont.value);
-      const jd = $("jd").value;
-      if (jd.trim()) renderMatch(DocStudioEngine.scoreAts(ed.getContent({ format: "text" }), jd));
-      else renderWatermarks();
-      setStatus("Watermark wording and hidden text removed. AI " + out.watermarks.ai + " / ATS " + out.watermarks.ats + ".", "ok");
+      skipReview = false;
+      reviewResume(true);
+      setStatus("Watermarks cleaned only. Layout unchanged. AI " + out.watermarks.ai + " / ATS " + out.watermarks.ats + ".", "ok");
     };
     $("btnTailor").onclick = () => {
       const text = tinymce.get("editor").getContent({ format: "text" });
@@ -306,10 +354,10 @@
       if (!jd.trim()) { setStatus("Paste the job description first.", "err"); return; }
       if (!text.trim()) { setStatus("Add your resume first.", "err"); return; }
       const out = DocStudioEngine.tailorResume(text, jd, tinymce.get("editor").getContent());
+      skipReview = true;
       tinymce.get("editor").setContent(out.html);
-      applyResumeFont(resumeFont.value, false);
-      renderMatch(out.after);
-      renderWatermarks();
+      skipReview = false;
+      reviewResume(true);
       $("filename").value = "Resume";
       setStatus("Resume prepared from your experience. Score now " + out.after.overall + " / 100. Save PDF or Word when ready.", "ok");
     };
@@ -337,6 +385,7 @@
         if (!ed) return false;
         ed.setContent(body);
         ed.getBody().style.fontFamily = "'" + resumeFont.value + "', Calibri, Carlito, sans-serif";
+        setTimeout(() => reviewResume(true), 50);
         return true;
       };
       if (go()) return;
@@ -344,6 +393,12 @@
       const timer = setInterval(() => {
         if (go() || ++n > 25) clearInterval(timer);
       }, 200);
+    }
+
+    function stripImportJunk(html) {
+      const d = new DOMParser().parseFromString("<div>" + html + "</div>", "text/html");
+      d.querySelectorAll("script,style,img,meta,link").forEach((n) => n.remove());
+      return d.body.innerHTML;
     }
 
     async function fileToEditor(file) {
@@ -410,7 +465,7 @@
 
     async function exportDoc(fmt) {
       const editor = tinymce.get("editor");
-      const html = editor.getContent();
+      const html = DocStudioEngine.stripHighlights(editor.getContent());
       const text = editor.getContent({ format: "text" });
       if (!text.trim()) { setStatus("Empty document.", "err"); return; }
       const name = $("filename").value || "document";
@@ -431,6 +486,9 @@
       if (fmt === "pdf" && window.html2pdf) {
         const el = document.createElement("div");
         el.innerHTML = html;
+        el.style.fontFamily = "Calibri, Carlito, Arial, sans-serif";
+        el.style.fontSize = "11pt";
+        el.style.lineHeight = "1.35";
         await html2pdf().set({ filename: name + ".pdf", margin: 12 }).from(el).save();
         setStatus("PDF saved (browser engine).", "ok");
         return;
