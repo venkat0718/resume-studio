@@ -1,0 +1,64 @@
+JORDAN LEE
+IT Program Manager
+
+Location: Example City | Phone: +1-555-0100 | Email: candidate@example.com | LinkedIn: linkedin.com/in/example-profile
+
+Date: 1 January 2026
+
+To: Hiring Committee
+
+Subject: Application for IT Program Manager
+
+Dear Hiring Committee,
+
+I am writing to express interest in the IT Program Manager role. This is a fictional sample resume used only to demonstrate the ATS analyser and resume builder. It does not describe a real person.
+
+Key highlights in this sample include:
+
+End-to-End Program Delivery: Sample wording for multi-year technology programs, SLA tracking, and Agile delivery.
+
+Stakeholder Alignment and Governance: Sample wording for steering committees and KPI scorecards.
+
+Technical Modernization: Sample wording for cloud, DevOps, and process automation.
+
+Sincerely,
+
+Jordan Lee
+
+
+JORDAN LEE
+IT Program Manager
+
+Location: Example City | Phone: +1-555-0100 | Email: candidate@example.com | LinkedIn: linkedin.com/in/example-profile
+
+Executive Summary
+Fictional IT program manager sample with placeholder achievements. Replace this document with your own resume before scoring a real job description.
+
+Core Competencies & Technical Skillset
+Program & Portfolio Delivery: Program management, governance, SLA and KPI tracking.
+
+Stakeholder & Executive Governance: Steering committees, vendor management.
+
+Methodologies & Tools: Agile, Scrum, Jira, Power BI, ITIL, DevOps, CI/CD.
+
+Professional Experience
+EXAMPLE TECHNOLOGIES | Example City
+
+Senior IT Program Manager (Jan 2020 – Present)
+
+Program Scope: Sample budget and team size for demonstration only.
+
+Program Delivery & Governance: Sample bullet for on-time delivery and SLA compliance.
+
+EXAMPLE SERVICES | Example City
+
+IT Lead (Jan 2016 – Dec 2019)
+
+Strategic Program Execution: Sample bullet for operations and uptime.
+
+Education & Certifications
+Bachelor of Science in Information Technology — Example University
+
+Certified Scrum Master (CSM) — Example issuer
+
+ITIL Foundation
