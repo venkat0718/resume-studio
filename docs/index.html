@@ -10,7 +10,9 @@
   <link href="fonts.css?v=20260928c" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/tinymce@7.6.1/tinymce.min.js" referrerpolicy="origin"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="engine.js?v=20260928d"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="engine.js?v=20260928e"></script>
   <style>
     :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
@@ -86,12 +88,12 @@
     </div>
     <div class="chrome-row">
       <div>
-        <label>Attach resume (txt / html)</label>
-        <input id="resumeFile" type="file" accept=".txt,.html,.htm,.md" />
+        <label>Attach resume (Word, PDF, or text)</label>
+        <input id="resumeFile" type="file" accept=".docx,.doc,.pdf,.txt,.html,.htm,.rtf" />
       </div>
       <div>
         <label>File name</label>
-        <input id="filename" type="text" value="ATS_Resume" />
+        <input id="filename" type="text" value="Resume" />
       </div>
     </div>
   </div>
@@ -276,8 +278,8 @@
       tinymce.get("editor").setContent(out.html);
       applyResumeFont(resumeFont.value);
       renderMatch(out.after);
-      $("filename").value = "ATS_Resume";
-      setStatus("Tailored resume written from your experience. Score now " + out.after.overall + " / 100. Save PDF or Word when ready.", "ok");
+      $("filename").value = "Resume";
+      setStatus("Resume prepared from your experience. Score now " + out.after.overall + " / 100. Save PDF or Word when ready.", "ok");
     };
 
     $("btnNew").onclick = () => tinymce.get("editor").setContent("<p></p>");
@@ -292,17 +294,57 @@
       }
     };
 
-    $("resumeFile").addEventListener("change", (ev) => {
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    function stripImportJunk(html) {
+      const d = new DOMParser().parseFromString("<div>" + html + "</div>", "text/html");
+      d.querySelectorAll("script,style,img,meta,link").forEach((n) => n.remove());
+      return d.body.innerHTML;
+    }
+
+    async function fileToEditor(file) {
+      const name = (file.name || "").toLowerCase();
+      const buf = await file.arrayBuffer();
+      const head = String.fromCharCode.apply(null, new Uint8Array(buf.slice(0, 8)));
+      if (name.endsWith(".docx") || head.slice(0, 2) === "PK") {
+        if (!window.mammoth) throw new Error("Word reader failed to load.");
+        const out = await mammoth.convertToHtml({ arrayBuffer: buf });
+        return { html: stripImportJunk(out.value), mode: "html" };
+      }
+      if (name.endsWith(".pdf") || head.slice(0, 4) === "%PDF") {
+        if (!window.pdfjsLib) throw new Error("PDF reader failed to load.");
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const parts = [];
+        for (let n = 1; n <= pdf.numPages; n++) {
+          const page = await pdf.getPage(n);
+          const content = await page.getTextContent();
+          parts.push(content.items.map((it) => it.str).join(" "));
+        }
+        return { html: "", text: DocStudioEngine.cleanResumeText(parts.join("\n")), mode: "text" };
+      }
+      const raw = DocStudioEngine.cleanResumeText(await file.text());
+      if (DocStudioEngine.looksLikeBinary(raw) || name.endsWith(".doc")) {
+        throw new Error("This file is not readable as text. Save it as .docx in Word and attach that.");
+      }
+      if (name.endsWith(".html") || name.endsWith(".htm")) return { html: stripImportJunk(raw), mode: "html" };
+      return { html: "", text: raw, mode: "text" };
+    }
+
+    $("resumeFile").addEventListener("change", async (ev) => {
       const file = ev.target.files && ev.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const raw = String(reader.result || "");
-        if (/\.html?$/i.test(file.name)) tinymce.get("editor").setContent(raw);
-        else tinymce.get("editor").setContent("<p>" + raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br/>") + "</p>");
-        setStatus("Resume loaded from file. Paste the JD and analyse.", "ok");
-      };
-      reader.readAsText(file);
+      setStatus("Reading resume…");
+      try {
+        const out = await fileToEditor(file);
+        if (out.mode === "html") tinymce.get("editor").setContent(out.html);
+        else tinymce.get("editor").setContent(DocStudioEngine.formatAtsResume(out.text));
+        applyResumeFont(resumeFont.value);
+        setStatus("Resume loaded. Paste the JD, analyse, then write the tailored version.", "ok");
+      } catch (e) {
+        setStatus(e.message || "Could not read that file.", "err");
+      }
     });
 
     async function exportDoc(fmt) {

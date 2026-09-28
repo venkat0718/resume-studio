@@ -198,41 +198,177 @@
       .replace(/>/g, "&gt;");
   }
 
-  function formatAtsResume(text) {
-    const lines = String(text || "").split(/\n/).map((l) => l.trim()).filter(Boolean);
-    if (!lines.length) return "<p></p>";
-    const headings = new Set([
-      "executive summary",
-      "core competencies & technical skillset",
-      "professional experience",
-      "education & certifications"
-    ]);
+  function cleanResumeText(raw) {
+    let s = String(raw || "");
+    if (s.charCodeAt(0) === 0xfeff) s = s.slice(1);
+    s = s
+      .replace(/\u0000/g, "")
+      .replace(/ï»¿/g, "")
+      .replace(/â€œ|â€\x9d|â€/g, '"')
+      .replace(/â€™|â€˜/g, "'")
+      .replace(/â€“|â€”/g, "–")
+      .replace(/â€¢/g, "•")
+      .replace(/Â /g, " ")
+      .replace(/Â/g, "")
+      .replace(/\r\n/g, "\n")
+      .replace(/[ \t]+\n/g, "\n");
+    return s;
+  }
+
+  function looksLikeBinary(s) {
+    if (!s) return false;
+    if (s.slice(0, 2) === "PK" || s.slice(0, 4) === "%PDF") return true;
+    if (s.indexOf("\x00") >= 0) return true;
+    const sample = s.slice(0, 4000);
+    let odd = 0;
+    for (let i = 0; i < sample.length; i++) {
+      const c = sample.charCodeAt(i);
+      if (c < 9 || (c > 13 && c < 32) || c === 65533) odd++;
+    }
+    return odd > 40;
+  }
+
+  function isHeading(ln) {
+    const t = ln.replace(/[:]+$/, "").trim().toLowerCase();
+    return /^(executive summary|professional summary|career summary|summary|profile|core competencies.*|technical skillset|technical skills|skills|skillset|professional experience|work experience|employment history|experience|education.*|certifications?|key highlights)$/.test(t);
+  }
+
+  function isJobLine(ln) {
+    return /[|].*\d{4}/.test(ln) || /\d{4}\s*[–-]\s*(Present|\d{4})/i.test(ln) || /\([A-Za-z]{3,9}\.?\s+\d{4}/.test(ln);
+  }
+
+  function parseResume(resumeText) {
+    const text = cleanResumeText(resumeText);
+    let lines = text.split(/\n/).map((l) => l.replace(/^[\s•·▪►‣–\-]+/, "").trim()).filter(Boolean);
+    const dear = lines.findIndex((l) => /^dear\s/i.test(l));
+    const exec = lines.findIndex((l) => /^executive summary$/i.test(l));
+    if (dear >= 0 && exec > dear) {
+      const nameIdx = lines.findIndex((l, idx) => idx > dear && idx <= exec && l === lines[0]);
+      if (nameIdx > 0) lines = lines.slice(nameIdx);
+      else lines = lines.slice(exec);
+    }
     let i = 0;
     const name = lines[i++] || "";
-    let role = "", contact = "";
-    if (lines[i] && /program|manager|lead/i.test(lines[i])) role = lines[i++];
-    if (lines[i] && /location|@|phone|linkedin/i.test(lines[i])) contact = lines[i++];
-    let start = 0;
-    lines.forEach((ln, idx) => {
-      if (headings.has(ln.toLowerCase())) start = idx;
-    });
-    const body = start ? lines.slice(start) : lines.slice(i);
-    const html = [
-      '<h1 style="text-align:center;color:#0F2C4C;font-family:Calibri,Arial,sans-serif;">' + escapeHtml(name) + "</h1>"
-    ];
-    if (role) html.push("<p style='text-align:center;'><strong>" + escapeHtml(role) + "</strong></p>");
-    if (contact) html.push("<p style='text-align:center;font-size:10pt;'>" + escapeHtml(contact) + "</p>");
-    html.push("<hr/>");
-    body.forEach((ln) => {
-      if (headings.has(ln.toLowerCase())) {
-        html.push('<h2 style="color:#0F2C4C;">' + escapeHtml(ln) + "</h2>");
-      } else if (/[|].*\d{4}/.test(ln) || /\d{4}\s*[–-]\s*(Present|\d{4})/.test(ln)) {
-        html.push("<p><strong>" + escapeHtml(ln) + "</strong></p>");
-      } else {
-        html.push("<p>" + escapeHtml(ln) + "</p>");
+    let role = "";
+    let contact = "";
+    if (lines[i] && lines[i].length < 90 && !isHeading(lines[i]) && !/@/.test(lines[i])) {
+      role = lines[i++];
+    }
+    while (lines[i] && (/location:|linkedin|@|phone|tel:|\+\d/i.test(lines[i]) || (lines[i].split("|").length >= 2 && lines[i].length < 180))) {
+      contact = contact ? contact + " | " + lines[i] : lines[i];
+      i++;
+    }
+    contact = contact.replace(/\s+\|\s+/g, " | ");
+    const sections = { summary: [], skills: [], experience: [], education: [] };
+    let bucket = "experience";
+    for (; i < lines.length; i++) {
+      const ln = lines[i];
+      const low = ln.replace(/[:]+$/, "").toLowerCase();
+      if (isHeading(ln)) {
+        if (/summary|profile/.test(low)) bucket = "summary";
+        else if (/skill|competenc/.test(low)) bucket = "skills";
+        else if (/education|certif/.test(low)) bucket = "education";
+        else if (/experience|employment|highlight/.test(low)) bucket = "experience";
+        else bucket = "experience";
+        continue;
       }
+      if (/^(sincerely|regards|yours faithfully),?$/i.test(ln)) continue;
+      sections[bucket].push(ln);
+    }
+    return { name, role, contact, sections, text };
+  }
+
+  const FACE = "Calibri,Carlito,Arial,sans-serif";
+  const NAVY = "#0F2C4C";
+
+  function wrapDoc(inner) {
+    return (
+      '<div style="font-family:' +
+      FACE +
+      ';font-size:11pt;color:#1c2433;line-height:1.35;max-width:720px;margin:0 auto;">' +
+      inner +
+      "</div>"
+    );
+  }
+
+  function formatAtsResume(text) {
+    const p = parseResume(text);
+    return resumeHtml(p, p.sections.summary.join(" "), p.sections.skills);
+  }
+
+  function resumeHtml(p, summary, skillLines) {
+    const h = [];
+    h.push('<h1 style="text-align:center;color:' + NAVY + ";font-family:" + FACE + ';font-size:18pt;letter-spacing:0.04em;margin:0 0 4pt 0;">' + escapeHtml(p.name) + "</h1>");
+    if (p.role) h.push('<p style="text-align:center;margin:0 0 4pt 0;font-size:12pt;">' + escapeHtml(p.role) + "</p>");
+    if (p.contact) h.push('<p style="text-align:center;margin:0 0 10pt 0;font-size:10pt;color:#334;">' + escapeHtml(p.contact) + "</p>");
+    h.push('<hr style="border:none;border-top:1px solid ' + NAVY + ';margin:0 0 12pt 0;"/>');
+    if (summary) {
+      h.push('<h2 style="color:' + NAVY + ";font-family:" + FACE + ';font-size:12pt;border-bottom:1px solid #c5cdd6;padding-bottom:2pt;margin:14pt 0 6pt 0;">Professional summary</h2>');
+      h.push('<p style="margin:0 0 8pt 0;">' + escapeHtml(summary) + "</p>");
+    }
+    const skills = (skillLines || []).map((x) => x.replace(/^•\s*/, "").trim()).filter(Boolean);
+    if (skills.length) {
+      h.push('<h2 style="color:' + NAVY + ";font-family:" + FACE + ';font-size:12pt;border-bottom:1px solid #c5cdd6;padding-bottom:2pt;margin:14pt 0 6pt 0;">Skills</h2>');
+      h.push("<ul style='margin:0 0 8pt 18pt;padding:0;'>");
+      skills.forEach((sk) => h.push("<li style='margin:0 0 3pt 0;'>" + escapeHtml(sk) + "</li>"));
+      h.push("</ul>");
+    }
+    if (p.sections.experience.length) {
+      h.push('<h2 style="color:' + NAVY + ";font-family:" + FACE + ';font-size:12pt;border-bottom:1px solid #c5cdd6;padding-bottom:2pt;margin:14pt 0 6pt 0;">Experience</h2>');
+      p.sections.experience.forEach((ln) => {
+        if (isJobLine(ln) || (ln === ln.toUpperCase() && ln.length > 6 && ln.length < 80)) {
+          h.push('<p style="margin:10pt 0 2pt 0;"><strong>' + escapeHtml(ln) + "</strong></p>");
+        } else {
+          h.push("<p style='margin:0 0 3pt 14pt;'>" + escapeHtml(ln) + "</p>");
+        }
+      });
+    }
+    if (p.sections.education.length) {
+      h.push('<h2 style="color:' + NAVY + ";font-family:" + FACE + ';font-size:12pt;border-bottom:1px solid #c5cdd6;padding-bottom:2pt;margin:14pt 0 6pt 0;">Education and certifications</h2>');
+      p.sections.education.forEach((ln) => {
+        h.push("<p style='margin:0 0 4pt 0;'>" + escapeHtml(ln) + "</p>");
+      });
+    }
+    return wrapDoc(h.join("\n"));
+  }
+
+  function humanSummary(p) {
+    const existing = p.sections.summary.join(" ").replace(/\s+/g, " ").trim();
+    if (existing && existing.length > 40 && !/aligned to this job|targeting |ATS|watermark|keywords/i.test(existing)) {
+      return existing.slice(0, 520);
+    }
+    const bits = p.sections.experience.filter((ln) => /(\$|\d+%|\d{2,}|led |managed |delivered |built )/i.test(ln)).slice(0, 3);
+    const role = p.role || "";
+    if (bits.length) {
+      const facts = bits.map((b) => b.replace(/^[^:]+:\s*/, "").replace(/\.$/, "")).join("; ");
+      return (role ? role + " with a record of " : "") + facts + ".";
+    }
+    return ((role ? role + ". " : "") + (p.sections.experience.slice(0, 2).join(" ") || existing)).trim();
+  }
+
+  function skillLinesFor(p, scored) {
+    const fromResume = p.sections.skills.slice();
+    if (fromResume.length) return fromResume;
+    const matched = (scored.matched || []).map((m) => m.term).filter((t) => t.length > 2 && t.length < 32);
+    const uniq = [];
+    matched.forEach((t) => {
+      const nice = t.replace(/\b\w/g, (c) => c.toUpperCase());
+      if (uniq.indexOf(nice) < 0) uniq.push(nice);
     });
-    return html.join("\n");
+    return uniq.length ? [uniq.join(", ")] : [];
+  }
+
+  function tailorResume(resumeText, jdText) {
+    const cleaned = cleanResumeText(resumeText);
+    const before = scoreAts(cleaned, jdText);
+    if (looksLikeBinary(cleaned)) {
+      return { html: "<p>This file could not be read as text. Attach a Word (.docx) or paste the resume.</p>", before: before, after: before };
+    }
+    const p = parseResume(cleaned);
+    const summary = humanSummary(p).replace(/<[^>]+>/g, "");
+    const html = resumeHtml(p, summary, skillLinesFor(p, before));
+    const after = scoreAts(html.replace(/<[^>]+>/g, "\n"), jdText);
+    return { html: html, before: before, after: after };
   }
 
   function buildResume(form) {
@@ -261,74 +397,14 @@
     ].join("\n");
   }
 
-  function tailorResume(resumeText, jdText) {
-    const before = scoreAts(resumeText, jdText);
-    const lines = String(resumeText || "").split(/\n/).map((l) => l.trim()).filter(Boolean);
-    if (!lines.length) {
-      return { html: "<p></p>", before: before, after: before };
-    }
-    const jdTitle = (jdText || "").split(/\n/).map((s) => s.trim()).find(Boolean) || "the target role";
-    const metrics = (resumeText.match(/(\$[\d,.]+m?|\d+%|\d{2,}\+?)/g) || []).slice(0, 5);
-    let i = 0;
-    const name = lines[i++] || "Candidate";
-    let role = "";
-    let contact = "";
-    if (lines[i] && !/^location:/i.test(lines[i]) && lines[i].length < 80) {
-      role = lines[i++];
-    }
-    if (lines[i] && /location:|@|phone|linkedin/i.test(lines[i])) {
-      contact = lines[i++];
-    }
-    const rest = lines.slice(i);
-    const skillTerms = [];
-    before.matched.forEach((m) => skillTerms.push(m.term));
-    before.missing.forEach((m) => {
-      if (m.term.length < 36 && skillTerms.indexOf(m.term) < 0) skillTerms.push(m.term);
-    });
-    const skillsLine = skillTerms
-      .map((t) => t.replace(/\b\w/g, (c) => c.toUpperCase()))
-      .join(" · ");
-    const summary =
-      "IT and change delivery leader targeting " +
-      jdTitle.replace(/\s+/g, " ").slice(0, 140) +
-      ". " +
-      (metrics.length ? "Evidence from this career includes " + metrics.join(", ") + ". " : "") +
-      "Experience below is unchanged in substance and aligned to this job description’s language and keywords.";
-    const html = [
-      '<h1 style="text-align:center;color:#0F2C4C;font-family:Calibri,Carlito,Arial,sans-serif;">' + escapeHtml(name) + "</h1>",
-      '<p style="text-align:center;"><strong>' + escapeHtml(role || jdTitle) + "</strong></p>",
-      contact ? '<p style="text-align:center;font-size:10pt;">' + escapeHtml(contact) + "</p>" : "",
-      "<hr/>",
-      '<h2 style="color:#0F2C4C;">Executive Summary</h2>',
-      "<p>" + escapeHtml(summary) + "</p>",
-      '<h2 style="color:#0F2C4C;">Core Competencies</h2>',
-      "<p>" + escapeHtml(skillsLine) + "</p>",
-      '<h2 style="color:#0F2C4C;">Professional Experience</h2>'
-    ];
-    rest.forEach((ln) => {
-      const low = ln.toLowerCase();
-      if (
-        low === "executive summary" ||
-        low === "core competencies & technical skillset" ||
-        low === "professional experience" ||
-        low === "education & certifications"
-      ) {
-        if (low.indexOf("education") === 0) {
-          html.push('<h2 style="color:#0F2C4C;">Education & Certifications</h2>');
-        }
-        return;
-      }
-      if (/[|].*\d{4}/.test(ln) || /\d{4}\s*[–-]\s*(Present|\d{4})/.test(ln) || (ln === ln.toUpperCase() && ln.length > 8)) {
-        html.push("<p><strong>" + escapeHtml(ln) + "</strong></p>");
-      } else {
-        html.push("<p>" + escapeHtml(ln) + "</p>");
-      }
-    });
-    const htmlStr = html.filter(Boolean).join("\n");
-    const afterText = htmlStr.replace(/<[^>]+>/g, "\n");
-    const after = scoreAts(afterText, jdText);
-    return { html: htmlStr, before: before, after: after };
-  }
-
-  global.DocStudioEngine = { scoreAts, scoreAiWriting, formatAtsResume, buildResume, extractKeywords, tailorResume };
+  global.DocStudioEngine = {
+    scoreAts,
+    scoreAiWriting,
+    formatAtsResume,
+    buildResume,
+    extractKeywords,
+    tailorResume,
+    cleanResumeText,
+    looksLikeBinary
+  };
 })(window);
