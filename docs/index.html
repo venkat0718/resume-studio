@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="engine.js?v=20260928h"></script>
+  <script src="engine.js?v=20260928i"></script>
   <style>
     :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
@@ -251,10 +251,19 @@
           ed.getDoc().head.appendChild(s);
           ed.getBody().style.fontFamily = "Calibri, Carlito, sans-serif";
         });
-        ed.on("PastePostProcess", () => setTimeout(() => reviewResume(true), 80));
+        ed.on("PastePostProcess", (e) => {
+          if (e.node && e.node.innerHTML) {
+            const hi = DocStudioEngine.highlightWatermarks(e.node.innerHTML);
+            if (hi.html !== e.node.innerHTML) e.node.innerHTML = hi.html;
+          }
+          setTimeout(() => updateScoresOnly(), 50);
+        });
         ed.on("keyup", () => {
           clearTimeout(ed._wmTimer);
-          ed._wmTimer = setTimeout(() => reviewResume(false), 700);
+          ed._wmTimer = setTimeout(() => {
+            unwrapStaleInEditor(ed);
+            updateScoresOnly();
+          }, 800);
         });
       }
     });
@@ -281,6 +290,40 @@
       $("findings").innerHTML = (data.findings || []).map((x) => "<li>" + x + "</li>").join("");
     }
 
+    function unwrapStaleInEditor(ed) {
+      const body = ed.getBody();
+      if (!body) return;
+      const wm = DocStudioEngine.scoreWatermarks(body.innerText || body.textContent || "");
+      const hits = (wm.aiHits || []).concat(wm.atsHits || []).map((h) => h.toLowerCase());
+      body.querySelectorAll("mark.wm-ai, mark.wm-ats").forEach((m) => {
+        const t = (m.textContent || "").toLowerCase().trim();
+        if (!t || !hits.some((h) => t.indexOf(h) >= 0 || h.indexOf(t) >= 0)) {
+          const p = m.parentNode;
+          if (!p) return;
+          while (m.firstChild) p.insertBefore(m.firstChild, m);
+          p.removeChild(m);
+        }
+      });
+    }
+
+    function updateScoresOnly() {
+      const ed = tinymce.get("editor");
+      if (!ed) return;
+      const text = ed.getContent({ format: "text" });
+      if (!text.trim()) {
+        paintWatermarks({ ai: 0, ats: 0, notes: ["Paste or attach a resume."] });
+        return;
+      }
+      const wm = DocStudioEngine.scoreWatermarks(ed.getContent());
+      paintWatermarks(wm);
+      const jd = $("jd").value;
+      if (jd.trim()) paintMatch(DocStudioEngine.scoreAts(text, jd));
+      else {
+        $("overall").textContent = Math.max(0, 100 - Math.round((wm.ai + wm.ats) / 2)) + " / 100";
+        $("band").textContent = text.split(/\s+/).filter(Boolean).length + " words · cleanliness (paste a JD for keyword match)";
+      }
+    }
+
     function reviewResume(applyHighlights) {
       const ed = tinymce.get("editor");
       if (!ed || skipReview) return;
@@ -289,32 +332,20 @@
         paintWatermarks({ ai: 0, ats: 0, notes: ["Paste or attach a resume."] });
         return;
       }
-      let html = ed.getContent();
       if (applyHighlights) {
+        const html = ed.getContent();
         const hi = DocStudioEngine.highlightWatermarks(html);
         if (hi.html !== html) {
+          const bm = ed.selection.getBookmark(2, true);
           skipReview = true;
           ed.setContent(hi.html);
           skipReview = false;
-          html = hi.html;
+          try { ed.selection.moveToBookmark(bm); } catch (err) {}
         }
-      } else if (/<mark\b/i.test(html)) {
-        const next = DocStudioEngine.unwrapStaleMarks(html);
-        if (next !== html) {
-          skipReview = true;
-          ed.setContent(next);
-          skipReview = false;
-          html = next;
-        }
+      } else {
+        unwrapStaleInEditor(ed);
       }
-      const wm = DocStudioEngine.scoreWatermarks(html);
-      paintWatermarks(wm);
-      const jd = $("jd").value;
-      if (jd.trim()) paintMatch(DocStudioEngine.scoreAts(ed.getContent({ format: "text" }), jd));
-      else {
-        $("overall").textContent = Math.max(0, 100 - Math.round((wm.ai + wm.ats) / 2)) + " / 100";
-        $("band").textContent = text.split(/\s+/).filter(Boolean).length + " words · cleanliness (paste a JD for keyword match)";
-      }
+      updateScoresOnly();
     }
 
     function renderWatermarks() {
