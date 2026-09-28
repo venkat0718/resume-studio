@@ -22,7 +22,7 @@ On a narrow window the columns stack: JD, then editor, then scores. Each pane sc
 
 ## Fonts
 
-The editor font list loads Google Fonts (Carlito as a Calibri stand-in, Arimo, Tinos, Caladea, Cousine, EB Garamond, Libre Baskerville, Merriweather, PT Serif, Noto Serif/Sans, Open Sans, Source Sans 3, Roboto, Lato, Nunito, Work Sans, IBM Plex Sans). System Arial, Georgia, and Times New Roman remain available.
+The editor font list loads Google Fonts plus bundled Calibri/Cambria/Times/Arial stand-ins (Carlito, Caladea, Tinos, Arimo) so those names work in the browser.
 
 ## What tailoring does and does not do
 

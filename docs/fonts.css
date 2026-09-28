@@ -1,0 +1,46 @@
+/* Office-style names: use the PC font when installed, else OFL metric-compatible files. */
+@font-face { font-family: Calibri; font-style: normal; font-weight: 400; font-display: swap; src: local("Calibri"), url("fonts/Carlito-Regular.ttf") format("truetype"); }
+@font-face { font-family: Calibri; font-style: normal; font-weight: 700; font-display: swap; src: local("Calibri Bold"), local("Calibri"), url("fonts/Carlito-Bold.ttf") format("truetype"); }
+@font-face { font-family: Calibri; font-style: italic; font-weight: 400; font-display: swap; src: local("Calibri Italic"), url("fonts/Carlito-Italic.ttf") format("truetype"); }
+@font-face { font-family: Calibri; font-style: italic; font-weight: 700; font-display: swap; src: local("Calibri Bold Italic"), url("fonts/Carlito-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Carlito; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/Carlito-Regular.ttf") format("truetype"); }
+@font-face { font-family: Carlito; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/Carlito-Bold.ttf") format("truetype"); }
+@font-face { font-family: Carlito; font-style: italic; font-weight: 400; font-display: swap; src: url("fonts/Carlito-Italic.ttf") format("truetype"); }
+@font-face { font-family: Carlito; font-style: italic; font-weight: 700; font-display: swap; src: url("fonts/Carlito-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Cambria; font-style: normal; font-weight: 400; font-display: swap; src: local("Cambria"), url("fonts/Caladea-Regular.ttf") format("truetype"); }
+@font-face { font-family: Cambria; font-style: normal; font-weight: 700; font-display: swap; src: local("Cambria Bold"), url("fonts/Caladea-Bold.ttf") format("truetype"); }
+@font-face { font-family: Cambria; font-style: italic; font-weight: 400; font-display: swap; src: local("Cambria Italic"), url("fonts/Caladea-Italic.ttf") format("truetype"); }
+@font-face { font-family: Cambria; font-style: italic; font-weight: 700; font-display: swap; src: local("Cambria Bold Italic"), url("fonts/Caladea-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Caladea; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/Caladea-Regular.ttf") format("truetype"); }
+@font-face { font-family: Caladea; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/Caladea-Bold.ttf") format("truetype"); }
+@font-face { font-family: Caladea; font-style: italic; font-weight: 400; font-display: swap; src: url("fonts/Caladea-Italic.ttf") format("truetype"); }
+@font-face { font-family: Caladea; font-style: italic; font-weight: 700; font-display: swap; src: url("fonts/Caladea-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: "Times New Roman"; font-style: normal; font-weight: 400; font-display: swap; src: local("Times New Roman"), url("fonts/Tinos-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Times New Roman"; font-style: normal; font-weight: 700; font-display: swap; src: local("Times New Roman Bold"), url("fonts/Tinos-Bold.ttf") format("truetype"); }
+@font-face { font-family: "Times New Roman"; font-style: italic; font-weight: 400; font-display: swap; src: local("Times New Roman Italic"), url("fonts/Tinos-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Times New Roman"; font-style: italic; font-weight: 700; font-display: swap; src: local("Times New Roman Bold Italic"), url("fonts/Tinos-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Tinos; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/Tinos-Regular.ttf") format("truetype"); }
+@font-face { font-family: Tinos; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/Tinos-Bold.ttf") format("truetype"); }
+@font-face { font-family: Tinos; font-style: italic; font-weight: 400; font-display: swap; src: url("fonts/Tinos-Italic.ttf") format("truetype"); }
+@font-face { font-family: Tinos; font-style: italic; font-weight: 700; font-display: swap; src: url("fonts/Tinos-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Arial; font-style: normal; font-weight: 100 900; font-display: swap; src: local("Arial"), url("fonts/Arimo-Regular.ttf") format("truetype"); }
+@font-face { font-family: Arimo; font-style: normal; font-weight: 100 900; font-display: swap; src: url("fonts/Arimo-Regular.ttf") format("truetype"); }
+
+@font-face { font-family: "Courier New"; font-style: normal; font-weight: 400; font-display: swap; src: local("Courier New"), url("fonts/Cousine-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Courier New"; font-style: normal; font-weight: 700; font-display: swap; src: local("Courier New Bold"), url("fonts/Cousine-Bold.ttf") format("truetype"); }
+@font-face { font-family: "Courier New"; font-style: italic; font-weight: 400; font-display: swap; src: local("Courier New Italic"), url("fonts/Cousine-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Courier New"; font-style: italic; font-weight: 700; font-display: swap; src: local("Courier New Bold Italic"), url("fonts/Cousine-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Cousine; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/Cousine-Regular.ttf") format("truetype"); }
+@font-face { font-family: Cousine; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/Cousine-Bold.ttf") format("truetype"); }
+@font-face { font-family: Cousine; font-style: italic; font-weight: 400; font-display: swap; src: url("fonts/Cousine-Italic.ttf") format("truetype"); }
+@font-face { font-family: Cousine; font-style: italic; font-weight: 700; font-display: swap; src: url("fonts/Cousine-BoldItalic.ttf") format("truetype"); }
+
+@font-face { font-family: Garamond; font-style: normal; font-weight: 400 800; font-display: swap; src: local("Garamond"), url("fonts/EBGaramond-Regular.ttf") format("truetype"); }
+@font-face { font-family: "EB Garamond"; font-style: normal; font-weight: 400 800; font-display: swap; src: url("fonts/EBGaramond-Regular.ttf") format("truetype"); }

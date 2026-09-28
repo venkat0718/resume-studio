@@ -295,7 +295,7 @@
       (metrics.length ? "Evidence from this career includes " + metrics.join(", ") + ". " : "") +
       "Experience below is unchanged in substance and aligned to this job description’s language and keywords.";
     const html = [
-      '<h1 style="text-align:center;color:#0F2C4C;font-family:Carlito,Calibri,Arial,sans-serif;">' + escapeHtml(name) + "</h1>",
+      '<h1 style="text-align:center;color:#0F2C4C;font-family:Calibri,Carlito,Arial,sans-serif;">' + escapeHtml(name) + "</h1>",
       '<p style="text-align:center;"><strong>' + escapeHtml(role || jdTitle) + "</strong></p>",
       contact ? '<p style="text-align:center;font-size:10pt;">' + escapeHtml(contact) + "</p>" : "",
       "<hr/>",

@@ -35,6 +35,16 @@ def sample_txt():
     return send_from_directory(ROOT / "docs", "sample.txt")
 
 
+@app.get("/fonts.css")
+def fonts_css():
+    return send_from_directory(ROOT / "docs", "fonts.css")
+
+
+@app.get("/fonts/<path:name>")
+def font_file(name):
+    return send_from_directory(ROOT / "docs" / "fonts", name)
+
+
 @app.post("/export")
 def export():
     fmt = (request.form.get("format") or "pdf").lower()

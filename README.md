@@ -18,4 +18,4 @@ http://127.0.0.1:5055
 
 See `Doc/` for overview, user guide, ATS method, Flask, and GitHub Pages.
 
-Editor fonts are loaded from Google Fonts (Carlito, Arimo, Tinos, and other serif/sans families). Demo text is fictional (Jordan Lee / example.com).
+The editor font list includes Calibri, Cambria, Arial, Times New Roman, and other Word-style names. On the web those load from bundled metric-compatible fonts (Carlito, Caladea, Arimo, Tinos, Cousine) when the Office font is not installed. Demo text is fictional (Jordan Lee / example.com).
