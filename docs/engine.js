@@ -12,10 +12,77 @@
 
   const AI_MARKERS = [
     "delve", "tapestry", "underscore", "pivotal", "moreover", "furthermore",
-    "it is important to note", "in today's world", "landscape", "leverage",
-    "robust", "seamless", "comprehensive", "cutting-edge", "elevate",
-    "foster", "harness", "as an ai", "in conclusion", "to summarize",
-    "plays a crucial role", "not only", "but also", "ever-evolving"
+    "it is important to note", "in today's world", "in today's fast-paced",
+    "landscape", "leverage", "robust", "seamless", "comprehensive", "cutting-edge",
+    "elevate", "foster", "harness", "as an ai", "in conclusion", "to summarize",
+    "plays a crucial role", "not only", "but also", "ever-evolving",
+    "results-driven", "passionate about", "seasoned professional", "dynamic leader",
+    "synergy", "synergies", "spearheaded", "orchestrated", "pioneered",
+    "utilize", "utilized", "utilising", "utilizing", "aligned to this job",
+    "targeting the", "keyword", "ats optim", "watermark"
+  ];
+
+  const PLAIN_SWAPS = [
+    [/as an ai language model[^.]*\.?/gi, ""],
+    [/\bleverage[sd]?\b/gi, "use"],
+    [/\butili[sz]e[sd]?\b/gi, "use"],
+    [/\butili[sz]ing\b/gi, "using"],
+    [/\bspearheaded\b/gi, "led"],
+    [/\borchestrated\b/gi, "ran"],
+    [/\bpioneered\b/gi, "started"],
+    [/\bfacilitated\b/gi, "helped"],
+    [/\brobust\b/gi, "solid"],
+    [/\bseamless(?:ly)?\b/gi, "smooth"],
+    [/\bcomprehensive\b/gi, "full"],
+    [/\bcutting-edge\b/gi, "current"],
+    [/\bfurthermore,?\s*/gi, ""],
+    [/\bmoreover,?\s*/gi, ""],
+    [/\bdelve into\b/gi, "look at"],
+    [/\bharness(?:ed|ing)?\b/gi, "use"],
+    [/\bfoster(?:ed|ing)?\b/gi, "support"],
+    [/\belevate[sd]?\b/gi, "improve"],
+    [/\bsynergies\b/gi, "joint work"],
+    [/\bsynergy\b/gi, "joint work"],
+    [/\bresults-driven\b/gi, "practical"],
+    [/\bpassionate about\b/gi, "worked on"],
+    [/\bseasoned professional\b/gi, "experienced"],
+    [/\bdynamic leader\b/gi, "manager"],
+    [/\bin today's (?:fast-paced )?world,?\s*/gi, ""],
+    [/\bit is important to note that\s*/gi, ""],
+    [/\bplays a crucial role in\b/gi, "supports"],
+    [/\bever-evolving\b/gi, "changing"],
+    [/\bATS[- ]optimis(?:e|ed|ing|ation)\b/gi, ""],
+    [/\bATS[- ]optimiz(?:e|ed|ing|ation)\b/gi, ""],
+    [/\baligned to this job description[^.]*\.?/gi, ""],
+    [/\btargeting the [^.]*\.?/gi, ""],
+    [/\bwatermark[s]?\b/gi, ""]
+  ];
+
+  const ATS_MARKERS = [
+    "ats optimized", "ats-optimised", "ats friendly", "applicant tracking",
+    "keyword optimized", "keywords:", "core competencies & technical skillset",
+    "hidden keywords", "seo resume"
+  ];
+
+  const ALIASES = [
+    { jd: "program management", like: ["program delivery", "programme delivery", "pmo", "managed programs", "multi-year program"] },
+    { jd: "project management", like: ["project delivery", "ran projects", "managed projects"] },
+    { jd: "change management", like: ["change", "transition", "adoption"] },
+    { jd: "stakeholder management", like: ["stakeholder", "sponsors", "steering"] },
+    { jd: "vendor management", like: ["vendor", "supplier", "partners"] },
+    { jd: "people leadership", like: ["led a team", "managed a team", "people"] },
+    { jd: "agile", like: ["scrum", "sprint", "kanban"] },
+    { jd: "devops", like: ["ci/cd", "release", "deployment"] },
+    { jd: "ci/cd", like: ["devops", "pipeline", "continuous"] },
+    { jd: "sla", like: ["service level", "uptime"] },
+    { jd: "kpi", like: ["scorecard", "metrics", "measures"] },
+    { jd: "itil", like: ["service management", "incident"] },
+    { jd: "cloud-native", like: ["cloud", "aws", "azure"] },
+    { jd: "legacy modernization", like: ["legacy", "modernisation", "modernization", "upgrade"] },
+    { jd: "jira", like: ["backlog", "tickets"] },
+    { jd: "power bi", like: ["dashboard", "reporting"] },
+    { jd: "budget", like: ["cost", "$", "spend"] },
+    { jd: "risk management", like: ["risk", "issue", "raid"] }
   ];
 
   function norm(t) {
@@ -298,7 +365,7 @@
 
   function resumeHtml(p, summary, skillLines) {
     const h = [];
-    h.push('<h1 style="text-align:center;color:' + NAVY + ";font-family:" + FACE + ';font-size:18pt;letter-spacing:0.04em;margin:0 0 4pt 0;">' + escapeHtml(p.name) + "</h1>");
+    h.push('<h1 style="text-align:center;color:' + NAVY + ";font-family:" + FACE + ';font-size:18pt;margin:0 0 4pt 0;">' + escapeHtml(p.name) + "</h1>");
     if (p.role) h.push('<p style="text-align:center;margin:0 0 4pt 0;font-size:12pt;">' + escapeHtml(p.role) + "</p>");
     if (p.contact) h.push('<p style="text-align:center;margin:0 0 10pt 0;font-size:10pt;color:#334;">' + escapeHtml(p.contact) + "</p>");
     h.push('<hr style="border:none;border-top:1px solid ' + NAVY + ';margin:0 0 12pt 0;"/>');
@@ -334,28 +401,49 @@
 
   function humanSummary(p) {
     const existing = p.sections.summary.join(" ").replace(/\s+/g, " ").trim();
-    if (existing && existing.length > 40 && !/aligned to this job|targeting |ATS|watermark|keywords/i.test(existing)) {
-      return existing.slice(0, 520);
+    if (existing && existing.length > 40 && !/aligned to this job|targeting |ATS|watermark|keywords:/i.test(existing)) {
+      return existing.slice(0, 480);
     }
-    const bits = p.sections.experience.filter((ln) => /(\$|\d+%|\d{2,}|led |managed |delivered |built )/i.test(ln)).slice(0, 3);
+    const bits = p.sections.experience.filter((ln) => /(\$|\d+%|\d{2,}|led |managed |delivered )/i.test(ln)).slice(0, 2);
     const role = p.role || "";
     if (bits.length) {
-      const facts = bits.map((b) => b.replace(/^[^:]+:\s*/, "").replace(/\.$/, "")).join("; ");
-      return (role ? role + " with a record of " : "") + facts + ".";
+      return (role ? role + ". " : "") + bits.map((b) => b.replace(/^[^:]+:\s*/, "")).join(" ");
     }
     return ((role ? role + ". " : "") + (p.sections.experience.slice(0, 2).join(" ") || existing)).trim();
   }
 
-  function skillLinesFor(p, scored) {
+  function lineFitsTerm(line, term) {
+    const low = line.toLowerCase();
+    if (low.includes(term.toLowerCase())) return true;
+    const row = ALIASES.find((a) => a.jd === term.toLowerCase());
+    if (row && row.like.some((x) => low.includes(x))) return true;
+    const words = term.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    return words.length >= 2 && words.every((w) => low.includes(w));
+  }
+
+  function weaveTerm(line, term) {
+    if (line.toLowerCase().includes(term.toLowerCase())) return line;
+    const row = ALIASES.find((a) => a.jd === term.toLowerCase());
+    if (!row) return line;
+    for (let i = 0; i < row.like.length; i++) {
+      const like = row.like[i];
+      const re = new RegExp(like.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      if (re.test(line)) return line.replace(re, term);
+    }
+    return line;
+  }
+
+  function skillLinesFor(p, usedTerms) {
     const fromResume = p.sections.skills.slice();
-    if (fromResume.length) return fromResume;
-    const matched = (scored.matched || []).map((m) => m.term).filter((t) => t.length > 2 && t.length < 32);
-    const uniq = [];
-    matched.forEach((t) => {
-      const nice = t.replace(/\b\w/g, (c) => c.toUpperCase());
-      if (uniq.indexOf(nice) < 0) uniq.push(nice);
-    });
-    return uniq.length ? [uniq.join(", ")] : [];
+    if (!fromResume.length) return usedTerms.slice(0, 8).map((t) => t.replace(/\b\w/g, (c) => c.toUpperCase()));
+    const extra = usedTerms.filter((t) => {
+      const blob = fromResume.join(" ").toLowerCase();
+      return blob.indexOf(t.toLowerCase()) < 0;
+    }).slice(0, 4);
+    if (!extra.length) return fromResume;
+    const copy = fromResume.slice();
+    copy[0] = copy[0] + ", " + extra.join(", ");
+    return copy;
   }
 
   function tailorResume(resumeText, jdText) {
@@ -365,10 +453,69 @@
       return { html: "<p>This file could not be read as text. Attach a Word (.docx) or paste the resume.</p>", before: before, after: before };
     }
     const p = parseResume(cleaned);
-    const summary = humanSummary(p).replace(/<[^>]+>/g, "");
-    const html = resumeHtml(p, summary, skillLinesFor(p, before));
+    const missing = (before.missing || []).map((m) => m.term);
+    let weaves = 0;
+    p.sections.experience = p.sections.experience.map((ln) => {
+      if (isJobLine(ln) || weaves >= 8) return ln;
+      let out = ln;
+      for (let i = 0; i < missing.length && weaves < 8; i++) {
+        const term = missing[i];
+        if (term.length < 3 || term.length > 40) continue;
+        if (!lineFitsTerm(out, term)) continue;
+        const next = weaveTerm(out, term);
+        if (next !== out) {
+          out = next;
+          weaves++;
+        }
+      }
+      return out;
+    });
+    const used = [];
+    const blob = (p.sections.experience.join(" ") + " " + p.sections.summary.join(" ")).toLowerCase();
+    (before.matched || []).concat(before.missing || []).forEach((m) => {
+      if (blob.indexOf(m.term.toLowerCase()) >= 0 && used.indexOf(m.term) < 0) used.push(m.term);
+    });
+    const summary = humanSummary(p);
+    let html = resumeHtml(p, summary, skillLinesFor(p, used));
+    html = cleanWatermarks(html).html;
     const after = scoreAts(html.replace(/<[^>]+>/g, "\n"), jdText);
     return { html: html, before: before, after: after };
+  }
+
+  function scoreWatermarks(htmlOrText) {
+    const raw = String(htmlOrText || "");
+    const low = raw.toLowerCase();
+    const aiHits = AI_MARKERS.filter((m) => low.includes(m));
+    const atsHits = ATS_MARKERS.filter((m) => low.includes(m));
+    const hidden = /font-size:\s*0|color:\s*#(fff|ffffff|white)|display:\s*none/i.test(raw);
+    const stuffed = ((raw.match(/[·•|,]\s*[A-Za-z][^·•|,]{0,24}/g) || []).length > 35);
+    const keywordBlock = /keywords\s*:/i.test(raw);
+    const ai = Math.min(100, aiHits.length * 12);
+    const ats = Math.min(100, atsHits.length * 25 + (hidden ? 40 : 0) + (stuffed ? 20 : 0) + (keywordBlock ? 25 : 0));
+    const notes = [];
+    if (aiHits.length) notes.push("AI-style wording: " + aiHits.slice(0, 8).join(", "));
+    if (atsHits.length) notes.push("ATS-style wording: " + atsHits.slice(0, 6).join(", "));
+    if (hidden) notes.push("Hidden text styles found (often used to stuff keywords).");
+    if (stuffed) notes.push("Very dense keyword list — looks machine-stuffed.");
+    if (keywordBlock) notes.push("A Keywords block is present.");
+    if (!notes.length) notes.push("No watermark flags on this check.");
+    return { ai: ai, ats: ats, aiHits: aiHits, atsHits: atsHits, notes: notes };
+  }
+
+  function cleanWatermarks(html) {
+    let h = String(html || "");
+    h = h.replace(/<[^>]*style="[^"]*(font-size:\s*0|color:\s*#(fff|ffffff)|color:\s*white|display:\s*none)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi, "");
+    h = h.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
+      if (tag) return tag;
+      let t = text;
+      PLAIN_SWAPS.forEach((pair) => {
+        t = t.replace(pair[0], pair[1]);
+      });
+      t = t.replace(/\s{2,}/g, " ");
+      return t;
+    });
+    h = h.replace(/<h[1-6][^>]*>\s*keywords\s*<\/h[1-6]>[\s\S]*?(?=<h[1-6]|$)/gi, "");
+    return { html: h, watermarks: scoreWatermarks(h) };
   }
 
   function buildResume(form) {
@@ -405,6 +552,8 @@
     extractKeywords,
     tailorResume,
     cleanResumeText,
-    looksLikeBinary
+    looksLikeBinary,
+    scoreWatermarks,
+    cleanWatermarks
   };
 })(window);

@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="engine.js?v=20260928e"></script>
+  <script src="engine.js?v=20260928f"></script>
   <style>
     :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
@@ -120,6 +120,13 @@
       <ul id="reject"></ul>
       <h3>Notes</h3>
       <ul id="findings"></ul>
+      <h3>Watermarks</h3>
+      <div style="font-size:0.82rem;line-height:1.4;">AI watermark <strong id="wmAi">—</strong> / 100</div>
+      <div class="bar"><span id="wmAiBar" style="width:0;background:#c48b2a;"></span></div>
+      <div style="font-size:0.82rem;line-height:1.4;">ATS watermark <strong id="wmAts">—</strong> / 100</div>
+      <div class="bar"><span id="wmAtsBar" style="width:0;background:#c48b2a;"></span></div>
+      <ul id="wmNotes"></ul>
+      <button class="ghost" id="btnCleanWm" type="button" style="margin-top:0.4rem;width:100%;">Clean watermarks</button>
     </div>
   </div>
   <script>
@@ -245,6 +252,17 @@
       }
     });
 
+    function renderWatermarks() {
+      const ed = tinymce.get("editor");
+      if (!ed) return;
+      const wm = DocStudioEngine.scoreWatermarks(ed.getContent());
+      $("wmAi").textContent = wm.ai;
+      $("wmAts").textContent = wm.ats;
+      $("wmAiBar").style.width = wm.ai + "%";
+      $("wmAtsBar").style.width = wm.ats + "%";
+      $("wmNotes").innerHTML = (wm.notes || []).map((x) => "<li>" + x + "</li>").join("");
+    }
+
     function renderMatch(data) {
       $("overall").textContent = data.overall + " / 100";
       $("band").textContent = data.band + (data.word_count ? " · " + data.word_count + " words" : "");
@@ -255,6 +273,7 @@
       $("missingKw").innerHTML = (data.missing || []).map((r) => "<span class='chip miss'>" + r.term + "</span>").join("") || "<span class='chip ok'>None</span>";
       $("reject").innerHTML = (data.rejection || []).map((x) => "<li>" + x + "</li>").join("");
       $("findings").innerHTML = (data.findings || []).map((x) => "<li>" + x + "</li>").join("");
+      renderWatermarks();
     }
 
     function analyse() {
@@ -269,6 +288,17 @@
     }
 
     $("btnScore").onclick = analyse;
+    $("btnCleanWm").onclick = () => {
+      const ed = tinymce.get("editor");
+      if (!ed) return;
+      const out = DocStudioEngine.cleanWatermarks(ed.getContent());
+      ed.setContent(out.html);
+      applyResumeFont(resumeFont.value);
+      const jd = $("jd").value;
+      if (jd.trim()) renderMatch(DocStudioEngine.scoreAts(ed.getContent({ format: "text" }), jd));
+      else renderWatermarks();
+      setStatus("Watermark wording and hidden text removed. AI " + out.watermarks.ai + " / ATS " + out.watermarks.ats + ".", "ok");
+    };
     $("btnTailor").onclick = () => {
       const text = tinymce.get("editor").getContent({ format: "text" });
       const jd = $("jd").value;
@@ -278,6 +308,7 @@
       tinymce.get("editor").setContent(out.html);
       applyResumeFont(resumeFont.value);
       renderMatch(out.after);
+      renderWatermarks();
       $("filename").value = "Resume";
       setStatus("Resume prepared from your experience. Score now " + out.after.overall + " / 100. Save PDF or Word when ready.", "ok");
     };
