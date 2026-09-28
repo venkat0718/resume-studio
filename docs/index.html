@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="engine.js?v=20260928j"></script>
+  <script src="engine.js?v=20260928k"></script>
   <style>
     :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
@@ -244,13 +244,14 @@
       placeholder: "Paste your full resume here, or use Attach resume / Load sample.",
       extended_valid_elements: "mark[class|style]",
       valid_children: "+body[mark],+p[mark],+li[mark],+span[mark],+td[mark],+h1[mark],+h2[mark],+h3[mark]",
-      content_style: officeFontFaces() + "body{font-family:Calibri,Carlito,Arial,sans-serif;font-size:11pt;line-height:1.4;max-width:720px;margin:16px auto;padding:0 12px;overflow-wrap:anywhere;} mark.wm-ai{background:#ffe08a;padding:0 1px;} mark.wm-ats{background:#ffc4c4;padding:0 1px;}",
+      paste_merge_formats: false,
+      paste_webkit_styles: "all",
+      content_style: officeFontFaces() + "mark.wm-ai,mark.wm-ats{background:#ffe08a;padding:0;margin:0;border:0;font:inherit;font-size:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;display:inline;} mark.wm-ats{background:#ffc4c4;}",
       setup: (ed) => {
         ed.on("init", () => {
           const s = ed.getDoc().createElement("style");
-          s.textContent = officeFontFaces() + " mark.wm-ai{background:#ffe08a;padding:0 1px;} mark.wm-ats{background:#ffc4c4;padding:0 1px;}";
+          s.textContent = officeFontFaces() + "mark.wm-ai,mark.wm-ats{background:#ffe08a;padding:0;margin:0;border:0;font:inherit;font-size:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;display:inline;} mark.wm-ats{background:#ffc4c4;}";
           ed.getDoc().head.appendChild(s);
-          ed.getBody().style.fontFamily = "Calibri, Carlito, sans-serif";
           ed.getBody().addEventListener("paste", () => {
             setTimeout(updateScoresOnly, 30);
             setTimeout(updateScoresOnly, 200);
@@ -446,8 +447,7 @@
         const ed = tinymce.get("editor");
         if (!ed) return false;
         ed.setContent(body);
-        ed.getBody().style.fontFamily = "'" + resumeFont.value + "', Calibri, Carlito, sans-serif";
-        setTimeout(() => reviewResume(true), 50);
+        setTimeout(() => reviewResume(true), 80);
         return true;
       };
       if (go()) return;
@@ -459,7 +459,7 @@
 
     function stripImportJunk(html) {
       const d = new DOMParser().parseFromString("<div>" + html + "</div>", "text/html");
-      d.querySelectorAll("script,style,img,meta,link").forEach((n) => n.remove());
+      d.querySelectorAll("script,iframe").forEach((n) => n.remove());
       return d.body.innerHTML;
     }
 
@@ -548,10 +548,7 @@
       if (fmt === "pdf" && window.html2pdf) {
         const el = document.createElement("div");
         el.innerHTML = html;
-        el.style.fontFamily = "Calibri, Carlito, Arial, sans-serif";
-        el.style.fontSize = "11pt";
-        el.style.lineHeight = "1.35";
-        await html2pdf().set({ filename: name + ".pdf", margin: 12 }).from(el).save();
+        await html2pdf().set({ filename: name + ".pdf", margin: 12, html2canvas: { scale: 2 } }).from(el).save();
         setStatus("PDF saved (browser engine).", "ok");
         return;
       }

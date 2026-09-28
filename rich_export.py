@@ -112,17 +112,8 @@ def html_to_pdf_bytes(html: str, title: str = "Document", paper: str = "A4") -> 
 <title>{bleach.clean(title)}</title>
 <style>
 @page {{ size: {size}; margin: 18mm; }}
-body {{ font-family: Times New Roman, Times, serif; font-size: 11pt; color: #1c2433; line-height: 1.4; }}
-h1 {{ color: #0F2C4C; font-size: 16pt; margin: 0 0 8pt; }}
-h2 {{ color: #0F2C4C; font-size: 13pt; margin: 14pt 0 6pt; }}
-h3 {{ font-size: 12pt; margin: 10pt 0 4pt; }}
-p {{ margin: 0 0 8pt; }}
-table {{ border-collapse: collapse; width: 100%; margin: 8pt 0; }}
-td, th {{ border: 1px solid #bbb; padding: 4pt; }}
-a {{ color: #1a7a6d; }}
+mark {{ background: transparent !important; color: inherit !important; }}
 img {{ max-width: 100%; }}
-ul, ol {{ margin: 0 0 8pt 18pt; }}
-blockquote {{ border-left: 3px solid #1a7a6d; margin: 8pt 0; padding-left: 10pt; color: #5c6b7a; }}
 </style>
 </head>
 <body>{html}</body>

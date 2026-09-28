@@ -607,23 +607,23 @@
     return { ai: ai, ats: ats, aiHits: aiHits, atsHits: atsHits, notes: notes };
   }
 
-  function replaceInText(html, phrase, to) {
-    const re = new RegExp(escapeRe(phrase), "gi");
+  function mapTextNodes(html, fn) {
     return String(html || "").replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
       if (tag) return tag;
-      return text.replace(re, to);
+      return fn(text);
     });
+  }
+
+  function replaceInText(html, phrase, to) {
+    const re = new RegExp(escapeRe(phrase), "gi");
+    return mapTextNodes(html, (text) => text.replace(re, to));
   }
 
   function cleanWatermarks(html) {
     let h = stripHighlights(html);
-    h = h.replace(/<span[^>]*class="[^"]*wm-(?:ai|ats)[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, "$1");
-    h = h.replace(/<[^>]*style="[^"]*(font-size:\s*0|color:\s*#(fff|ffffff)|color:\s*white|display:\s*none)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi, "");
+    h = h.replace(/<span([^>]*class="[^"]*wm-(?:ai|ats)[^"]*"[^>]*)>([\s\S]*?)<\/span>/gi, "$2");
     PLAIN_SWAPS.forEach((pair) => {
-      h = h.replace(/(<[^>]+>)|([^<]+)/g, (m, tag, text) => {
-        if (tag) return tag;
-        return text.replace(pair[0], pair[1]);
-      });
+      h = mapTextNodes(h, (text) => text.replace(pair[0], pair[1]));
     });
     AI_MARKERS.forEach((m) => {
       h = replaceInText(h, m, "");
@@ -631,9 +631,8 @@
     ATS_MARKERS.forEach((m) => {
       h = replaceInText(h, m, "");
     });
-    h = h.replace(/<h[1-6][^>]*>\s*keywords\s*<\/h[1-6]>[\s\S]*?(?=<h[1-6]|$)/gi, "");
+    h = mapTextNodes(h, (text) => text.replace(/ {2,}/g, " ").replace(/ +\./g, ".").replace(/ ,/g, ","));
     h = stripHighlights(h);
-    h = h.replace(/[ \t]{2,}/g, " ").replace(/ +\./g, ".").replace(/ ,/g, ",");
     return { html: h, watermarks: scoreWatermarks(h) };
   }
 
