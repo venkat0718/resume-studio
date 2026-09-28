@@ -121,6 +121,16 @@
     (text.match(/[a-z][a-z0-9+/#.&-]{3,}/g) || []).forEach((t) => {
       if (!STOP.has(t)) counts[t] = (counts[t] || 0) + 1;
     });
+    (jd || "").split(/\n/).forEach((line) => {
+      const s = line.replace(/^[\s>*•·\-–\u2022\d.)]+/, "").trim().replace(/[.,;:]+$/, "");
+      const words = s.split(/\s+/).filter(Boolean);
+      if (words.length < 1 || words.length > 6 || s.length < 4 || s.length > 55) return;
+      if (/^(the|this|you|we|our|and|with|from|will|must|have|your|their)\b/i.test(s)) return;
+      const key = s.toLowerCase();
+      if (STOP.has(key) || seen.has(key)) return;
+      seen.add(key);
+      found.push({ term: key, category: category(key) });
+    });
     Object.entries(counts)
       .filter(([t, n]) => n >= 2 && !seen.has(t))
       .sort((a, b) => b[1] - a[1])
@@ -129,7 +139,7 @@
         seen.add(t);
         found.push({ term: t, category: category(t) });
       });
-    return found.slice(0, 80);
+    return found.slice(0, 100);
   }
 
   function scoreAts(resumeText, jdText) {
@@ -433,53 +443,100 @@
     return line;
   }
 
-  function skillLinesFor(p, usedTerms) {
-    const fromResume = p.sections.skills.slice();
-    if (!fromResume.length) return usedTerms.slice(0, 8).map((t) => t.replace(/\b\w/g, (c) => c.toUpperCase()));
-    const extra = usedTerms.filter((t) => {
-      const blob = fromResume.join(" ").toLowerCase();
-      return blob.indexOf(t.toLowerCase()) < 0;
-    }).slice(0, 4);
-    if (!extra.length) return fromResume;
-    const copy = fromResume.slice();
-    copy[0] = copy[0] + ", " + extra.join(", ");
-    return copy;
+  function termFitScore(line, term) {
+    const low = String(line || "").toLowerCase();
+    const t = String(term || "").toLowerCase();
+    if (!t || low.includes(t)) return low.includes(t) ? 100 : 0;
+    let s = 0;
+    const row = ALIASES.find((a) => a.jd === t);
+    if (row && row.like.some((x) => low.includes(x))) s += 55;
+    t.split(/\s+/).forEach((w) => {
+      if (w.length > 3 && !STOP.has(w) && low.includes(w)) s += 14;
+    });
+    return s;
   }
 
-  function tailorResume(resumeText, jdText) {
-    const cleaned = cleanResumeText(resumeText);
-    const before = scoreAts(cleaned, jdText);
-    if (looksLikeBinary(cleaned)) {
-      return { html: "<p>This file could not be read as text. Attach a Word (.docx) or paste the resume.</p>", before: before, after: before };
+  function insertTerm(line, term) {
+    const woven = weaveTerm(line, term);
+    if (woven !== line) return woven;
+    if (/\.\s*$/.test(line)) return line.replace(/\.\s*$/, ", including " + term + ".");
+    return String(line).replace(/\s+$/, "") + ", including " + term;
+  }
+
+  function walkTextNodes(root, out) {
+    if (!root) return;
+    if (root.nodeType === 3) {
+      if (/\S/.test(root.nodeValue || "")) out.push(root);
+      return;
     }
-    const p = parseResume(cleaned);
-    const missing = (before.missing || []).map((m) => m.term);
-    let weaves = 0;
-    p.sections.experience = p.sections.experience.map((ln) => {
-      if (isJobLine(ln) || weaves >= 8) return ln;
-      let out = ln;
-      for (let i = 0; i < missing.length && weaves < 8; i++) {
-        const term = missing[i];
-        if (term.length < 3 || term.length > 40) continue;
-        if (!lineFitsTerm(out, term)) continue;
-        const next = weaveTerm(out, term);
-        if (next !== out) {
-          out = next;
-          weaves++;
+    if (root.nodeType !== 1) return;
+    if (/^(script|style)$/i.test(root.nodeName)) return;
+    for (let c = root.firstChild; c; c = c.nextSibling) walkTextNodes(c, out);
+  }
+
+  function tailorInPlace(html, jdText) {
+    const before = scoreAts(String(html || "").replace(/<[^>]+>/g, "\n"), jdText);
+    const parsed = new DOMParser().parseFromString("<div id='rs-root'>" + html + "</div>", "text/html");
+    const root = parsed.getElementById("rs-root") || parsed.body;
+    const nodes = [];
+    walkTextNodes(root, nodes);
+    const missing = (before.missing || []).map((m) => m.term).filter((t) => t.length >= 3 && t.length <= 48);
+    let inserts = 0;
+    missing.forEach((term) => {
+      if (inserts >= 12) return;
+      let best = null;
+      let bestScore = 0;
+      nodes.forEach((n) => {
+        const val = n.nodeValue || "";
+        if (val.length < 12 || val.length > 400) return;
+        if (/^\s*(executive summary|skills|experience|education|core competencies)/i.test(val)) return;
+        const sc = termFitScore(val, term);
+        if (sc > bestScore) {
+          bestScore = sc;
+          best = n;
         }
+      });
+      if (!best || bestScore < 14) return;
+      if ((best.nodeValue || "").toLowerCase().indexOf(term.toLowerCase()) >= 0) return;
+      best.nodeValue = insertTerm(best.nodeValue, term);
+      inserts++;
+    });
+    const blob = (root.textContent || "").toLowerCase();
+    const extras = missing.filter((t) => blob.indexOf(t.toLowerCase()) >= 0).slice(0, 6);
+    if (extras.length) {
+      let skillNode = null;
+      nodes.forEach((n) => {
+        const v = n.nodeValue || "";
+        if (/skill|competenc/i.test(v) && v.length < 220) skillNode = n;
+      });
+      if (skillNode) {
+        extras.forEach((t) => {
+          if ((skillNode.nodeValue || "").toLowerCase().indexOf(t.toLowerCase()) < 0) {
+            skillNode.nodeValue = skillNode.nodeValue.replace(/\s+$/, "") + ", " + t;
+          }
+        });
       }
-      return out;
-    });
-    const used = [];
-    const blob = (p.sections.experience.join(" ") + " " + p.sections.summary.join(" ")).toLowerCase();
-    (before.matched || []).concat(before.missing || []).forEach((m) => {
-      if (blob.indexOf(m.term.toLowerCase()) >= 0 && used.indexOf(m.term) < 0) used.push(m.term);
-    });
-    const summary = humanSummary(p);
-    let html = resumeHtml(p, summary, skillLinesFor(p, used));
-    html = cleanWatermarks(html).html;
-    const after = scoreAts(html.replace(/<[^>]+>/g, "\n"), jdText);
-    return { html: html, before: before, after: after };
+    }
+    let outHtml = root.innerHTML;
+    outHtml = cleanWatermarks(outHtml).html;
+    const after = scoreAts(outHtml.replace(/<[^>]+>/g, "\n"), jdText);
+    return { html: outHtml, before: before, after: after };
+  }
+
+  function plainToHtml(text) {
+    return cleanResumeText(text)
+      .split(/\n/)
+      .map((l) => "<p>" + escapeHtml(l) + "</p>")
+      .join("\n");
+  }
+
+  function tailorResume(resumeText, jdText, html) {
+    const sourceHtml = html && String(html).replace(/<[^>]+>/g, "").trim() ? html : plainToHtml(resumeText);
+    if (looksLikeBinary(cleanResumeText(resumeText))) {
+      const before = scoreAts(resumeText, jdText);
+      return { html: sourceHtml, before: before, after: before };
+    }
+    return tailorInPlace(sourceHtml, jdText);
   }
 
   function scoreWatermarks(htmlOrText) {
@@ -554,6 +611,7 @@
     cleanResumeText,
     looksLikeBinary,
     scoreWatermarks,
-    cleanWatermarks
+    cleanWatermarks,
+    plainToHtml
   };
 })(window);

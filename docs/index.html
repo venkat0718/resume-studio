@@ -12,7 +12,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="engine.js?v=20260928f"></script>
+  <script src="engine.js?v=20260928g"></script>
   <style>
     :root { --navy:#0f2c4c; --teal:#1a7a6d; --gold:#c48b2a; --paper:#e8e2d6; --ink:#1c2433; --line:#d5cdc0; }
     * { box-sizing: border-box; }
@@ -213,15 +213,16 @@
     });
     resumeFont.value = "Calibri";
 
-    function applyResumeFont(name) {
+    function applyResumeFont(name, restyleAll) {
       const ed = tinymce.get("editor");
       if (!ed) return;
       ed.getBody().style.fontFamily = "'" + name + "', Calibri, Carlito, sans-serif";
+      if (!restyleAll) return;
       ed.execCommand("SelectAll");
       ed.execCommand("FontName", false, name);
       ed.selection.collapse(false);
     }
-    resumeFont.onchange = () => applyResumeFont(resumeFont.value);
+    resumeFont.onchange = () => applyResumeFont(resumeFont.value, true);
 
     tinymce.init({
       selector: "#editor",
@@ -304,9 +305,9 @@
       const jd = $("jd").value;
       if (!jd.trim()) { setStatus("Paste the job description first.", "err"); return; }
       if (!text.trim()) { setStatus("Add your resume first.", "err"); return; }
-      const out = DocStudioEngine.tailorResume(text, jd);
+      const out = DocStudioEngine.tailorResume(text, jd, tinymce.get("editor").getContent());
       tinymce.get("editor").setContent(out.html);
-      applyResumeFont(resumeFont.value);
+      applyResumeFont(resumeFont.value, false);
       renderMatch(out.after);
       renderWatermarks();
       $("filename").value = "Resume";
@@ -329,38 +330,69 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     }
 
-    function stripImportJunk(html) {
-      const d = new DOMParser().parseFromString("<div>" + html + "</div>", "text/html");
-      d.querySelectorAll("script,style,img,meta,link").forEach((n) => n.remove());
-      return d.body.innerHTML;
+    function setEditorHtml(html) {
+      const body = (html && String(html).trim()) ? html : "<p></p>";
+      const go = () => {
+        const ed = tinymce.get("editor");
+        if (!ed) return false;
+        ed.setContent(body);
+        ed.getBody().style.fontFamily = "'" + resumeFont.value + "', Calibri, Carlito, sans-serif";
+        return true;
+      };
+      if (go()) return;
+      let n = 0;
+      const timer = setInterval(() => {
+        if (go() || ++n > 25) clearInterval(timer);
+      }, 200);
     }
 
     async function fileToEditor(file) {
       const name = (file.name || "").toLowerCase();
       const buf = await file.arrayBuffer();
-      const head = String.fromCharCode.apply(null, new Uint8Array(buf.slice(0, 8)));
-      if (name.endsWith(".docx") || head.slice(0, 2) === "PK") {
-        if (!window.mammoth) throw new Error("Word reader failed to load.");
-        const out = await mammoth.convertToHtml({ arrayBuffer: buf });
-        return { html: stripImportJunk(out.value), mode: "html" };
+      const b = new Uint8Array(buf);
+      const isZip = b[0] === 0x50 && b[1] === 0x4b;
+      const isPdf = b[0] === 0x25 && b[1] === 0x50;
+      const isOle = b[0] === 0xd0 && b[1] === 0xcf;
+      if (isOle || name.endsWith(".doc")) {
+        throw new Error("Old .doc files cannot be read here. In Word choose File → Save As → Word Document (.docx), then attach that.");
       }
-      if (name.endsWith(".pdf") || head.slice(0, 4) === "%PDF") {
-        if (!window.pdfjsLib) throw new Error("PDF reader failed to load.");
+      if (name.endsWith(".docx") || isZip) {
+        const lib = window.mammoth || window.Mammoth;
+        if (!lib) throw new Error("Word reader did not load. Check your network and refresh.");
+        const htmlOut = await lib.convertToHtml({ arrayBuffer: buf });
+        let html = stripImportJunk(htmlOut.value || "");
+        if (!html.replace(/<[^>]+>/g, "").trim() && lib.extractRawText) {
+          const raw = await lib.extractRawText({ arrayBuffer: buf });
+          html = DocStudioEngine.plainToHtml(raw.value || "");
+        }
+        if (!html.replace(/<[^>]+>/g, "").trim()) throw new Error("No readable text in that Word file.");
+        return html;
+      }
+      if (name.endsWith(".pdf") || isPdf) {
+        if (!window.pdfjsLib) throw new Error("PDF reader did not load. Refresh, or save as .docx.");
         const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
         const parts = [];
         for (let n = 1; n <= pdf.numPages; n++) {
           const page = await pdf.getPage(n);
           const content = await page.getTextContent();
-          parts.push(content.items.map((it) => it.str).join(" "));
+          let lastY = null;
+          content.items.forEach((it) => {
+            const y = it.transform && it.transform[5];
+            if (lastY != null && y != null && Math.abs(y - lastY) > 2) parts.push("\n");
+            else if (parts.length && !/\s$/.test(parts[parts.length - 1])) parts.push(" ");
+            parts.push(it.str);
+            lastY = y;
+          });
+          parts.push("\n");
         }
-        return { html: "", text: DocStudioEngine.cleanResumeText(parts.join("\n")), mode: "text" };
+        return DocStudioEngine.plainToHtml(parts.join(""));
       }
       const raw = DocStudioEngine.cleanResumeText(await file.text());
-      if (DocStudioEngine.looksLikeBinary(raw) || name.endsWith(".doc")) {
-        throw new Error("This file is not readable as text. Save it as .docx in Word and attach that.");
+      if (DocStudioEngine.looksLikeBinary(raw)) {
+        throw new Error("This file is not readable as text. Save as .docx and attach that.");
       }
-      if (name.endsWith(".html") || name.endsWith(".htm")) return { html: stripImportJunk(raw), mode: "html" };
-      return { html: "", text: raw, mode: "text" };
+      if (name.endsWith(".html") || name.endsWith(".htm")) return stripImportJunk(raw);
+      return DocStudioEngine.plainToHtml(raw);
     }
 
     $("resumeFile").addEventListener("change", async (ev) => {
@@ -368,11 +400,9 @@
       if (!file) return;
       setStatus("Reading resume…");
       try {
-        const out = await fileToEditor(file);
-        if (out.mode === "html") tinymce.get("editor").setContent(out.html);
-        else tinymce.get("editor").setContent(DocStudioEngine.formatAtsResume(out.text));
-        applyResumeFont(resumeFont.value);
-        setStatus("Resume loaded. Paste the JD, analyse, then write the tailored version.", "ok");
+        const html = await fileToEditor(file);
+        setEditorHtml(html);
+        setStatus("Resume loaded in the editor. Paste the JD, analyse, then tailor.", "ok");
       } catch (e) {
         setStatus(e.message || "Could not read that file.", "err");
       }
